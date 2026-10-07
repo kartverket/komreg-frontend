@@ -1,0 +1,54 @@
+/* Theme from CSS, not `import '@kv-designsystem/react/green'` in TS, because the layer order
+   below has to be declared in the same file, before the import.
+   Everything it ships sits in layers: Digdir's in `ds.*`, Kartverket's in `kv.*` on top.
+   Our own CSS below is unlayered, so it beats both without specificity fights.
+   Swap `green` for `blue` to change theme. */
+@layer ds, kv;
+@import "@kv-designsystem/react/green";
+
+body {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  font-optical-sizing: auto;
+  font-feature-settings: "cv05" 1;
+  background: var(--ds-color-neutral-background-default);
+  color: var(--ds-color-neutral-text-default);
+}
+
+main {
+  max-width: 81rem;
+  box-sizing: content-box;
+  margin: 0 auto;
+  padding: var(--ds-size-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-size-4);
+}
+
+.map-surface {
+  position: fixed;
+  inset: 0;
+}
+
+.map-panel {
+  position: fixed;
+  top: var(--ds-size-3);
+  right: var(--ds-size-3);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: var(--ds-size-2);
+  padding: var(--ds-size-2);
+  background: var(--ds-color-neutral-background-default);
+  border-radius: var(--ds-border-radius-md);
+  box-shadow: var(--ds-shadow-md);
+}
+
+.map-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
