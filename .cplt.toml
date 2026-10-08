@@ -1,8 +1,5 @@
 [deny]
-paths = [
-    ".env",
-    ".env.local",
-]
+paths = [".env", ".env.local"]
 
 [propose]
 gh_guard = true

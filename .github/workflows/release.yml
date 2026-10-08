@@ -1,0 +1,88 @@
+name: Release to DEV
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  build:
+    # Avhengig av oppsett i smia-apps
+    if: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      digest: ${{ steps.push.outputs.digest }}
+      image_url: ${{ steps.image.outputs.image_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+        with:
+          node-version: "24"
+          cache: true
+      - run: vp install --frozen-lockfile
+      - run: vp check
+      - run: vp test
+      - run: vp build
+
+      - name: Version
+        id: version
+        run: echo "version=v${GITHUB_RUN_NUMBER}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build and push image
+        id: push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
+      - name: Image reference
+        id: image
+        run: echo "image_url=ghcr.io/${GITHUB_REPOSITORY}@${DIGEST}" >> "$GITHUB_OUTPUT"
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+
+  pharos:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      packages: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: kartverket/pharos@446d11f033ffe30b4c91f885c3ad34ea3d8c6af7 # v0.7.0
+        with:
+          allow_severity_level: critical
+          image_url: ${{ needs.build.outputs.image_url }}
+
+  deploy-dev:
+    needs: build
+    permissions:
+      contents: read
+      id-token: write
+    uses: kartverket/smia-workflows/.github/workflows/deploy-app.yml@main
+    with:
+      application: komreg-frontend
+      version: ${{ needs.build.outputs.version }}
+      digest: ${{ needs.build.outputs.digest }}
+      environment: dev
+      namespace: komreg-main
+      identity: komreg
