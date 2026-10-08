@@ -5,9 +5,9 @@
   "type": "module",
   "dependencies": {
     "@kv-designsystem/react": "1.0.0-alpha.5",
-    "@navikt/aksel-icons": "8.17.2",
+    "@navikt/aksel-icons": "8.18.0",
     "@tanstack/react-router": "1.170.41",
-    "ol": "10.10.0",
+    "ol": "10.11.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
@@ -18,12 +18,12 @@
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
-    "@types/node": "24.19.0",
+    "@types/node": "24.19.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
     "babel-plugin-react-compiler": "1.0.0",
-    "jsdom": "30.1.1",
+    "jsdom": "30.1.2",
     "typescript": "7.0.2",
     "vite": "catalog:",
     "vite-plus": "catalog:"
