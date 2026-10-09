@@ -13,7 +13,6 @@ permissions: {}
 jobs:
   build:
     # Avhengig av oppsett i smia-apps
-    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
