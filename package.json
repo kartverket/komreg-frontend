@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@kv-designsystem/react": "1.0.0-alpha.5",
+    "@kv-designsystem/react": "1.0.0-alpha.6",
     "@navikt/aksel-icons": "8.19.0",
     "@tanstack/react-router": "1.170.41",
     "ol": "10.11.0",
