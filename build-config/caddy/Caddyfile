@@ -29,6 +29,10 @@ handle /assets/* {
 	file_server
 }
 
+handle /health {
+	respond "ok" 200
+}
+
 handle {
 	root * /srv
 	try_files {path} /index.html
