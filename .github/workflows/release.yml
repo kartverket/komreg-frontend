@@ -84,4 +84,4 @@ jobs:
       digest: ${{ needs.build.outputs.digest }}
       environment: dev
       namespace: komreg-main
-      identity: komreg
+      identity: komreg-frontend
