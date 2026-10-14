@@ -12,48 +12,48 @@ import { ToggleButton } from "@/components/ToggleButton/ToggleButton";
 import { PencilLineIcon } from "@navikt/aksel-icons";
 
 export function MapDrawing() {
-    const [isMeasuringActive, setIsMeasuringActive] = useState(false);
+  const [isMeasuringActive, setIsMeasuringActive] = useState(false);
 
-    return (
-        <>
-            <Tooltip content={`Skru ${isMeasuringActive ? "av" : "på"} tegneverktøyet`}>
-                <ToggleButton isActive={isMeasuringActive} onToggle={setIsMeasuringActive} >
-                    <PencilLineIcon fontSize="1.5rem" aria-hidden />
-                </ToggleButton>
-            </Tooltip>
-            {isMeasuringActive && <DrawingInteraction />}
-        </>
-    );
+  return (
+    <>
+      <Tooltip content={`Skru ${isMeasuringActive ? "av" : "på"} tegneverktøyet`}>
+        <ToggleButton isActive={isMeasuringActive} onToggle={setIsMeasuringActive}>
+          <PencilLineIcon fontSize="1.5rem" aria-hidden />
+        </ToggleButton>
+      </Tooltip>
+      {isMeasuringActive && <DrawingInteraction />}
+    </>
+  );
 }
 
 function DrawingInteraction() {
-    const map = useMap();
-    useEffect(() => {
-        const source = new VectorSource();
-        const style = [
-            new Style({ stroke: new Stroke({ color: "#ffffff", width: 8 }) }),
-            new Style({ stroke: new Stroke({ color: "#1a833b", width: 4 }) }),
-        ];
-        const layer = new VectorLayer({ source, style });
-        const pointStyle = new Style({
-            image: new CircleStyle({
-                radius: 6,
-                fill: new Fill({ color: "#1a833b" }),
-                stroke: new Stroke({ color: "#ffffff", width: 1.5 }),
-            }),
-        });
-        const draw = new Draw({
-            source,
-            type: 'LineString',
-            style: (feature) => feature.getGeometry()?.getType() === 'Point' ? pointStyle : style,
-        });
-        draw.setActive(true);
-        map.addLayer(layer);
-        map.addInteraction(draw);
-        return () => {
-            map.removeInteraction(draw);
-            map.removeLayer(layer);
-        };
-    }, [map])
-    return null;
+  const map = useMap();
+  useEffect(() => {
+    const source = new VectorSource();
+    const style = [
+      new Style({ stroke: new Stroke({ color: "#ffffff", width: 8 }) }),
+      new Style({ stroke: new Stroke({ color: "#1a833b", width: 4 }) }),
+    ];
+    const layer = new VectorLayer({ source, style });
+    const pointStyle = new Style({
+      image: new CircleStyle({
+        radius: 6,
+        fill: new Fill({ color: "#1a833b" }),
+        stroke: new Stroke({ color: "#ffffff", width: 1.5 }),
+      }),
+    });
+    const draw = new Draw({
+      source,
+      type: "LineString",
+      style: (feature) => (feature.getGeometry()?.getType() === "Point" ? pointStyle : style),
+    });
+    draw.setActive(true);
+    map.addLayer(layer);
+    map.addInteraction(draw);
+    return () => {
+      map.removeInteraction(draw);
+      map.removeLayer(layer);
+    };
+  }, [map]);
+  return null;
 }
