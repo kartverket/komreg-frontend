@@ -1,0 +1,11 @@
+.maptoolbar {
+    position: fixed;
+    bottom: var(--ds-size-3);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: var(--ds-size-2);
+    background-color: var(--ds-color-surface-tinted);
+    padding: var(--ds-size-2);
+    border-radius: var(--ds-border-radius-lg);
+}

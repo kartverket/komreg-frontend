@@ -34,14 +34,6 @@ main {
   position: fixed;
   top: var(--ds-size-3);
   right: var(--ds-size-3);
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: end;
-  gap: var(--ds-size-2);
-  padding: var(--ds-size-2);
-  background: var(--ds-color-neutral-background-default);
-  border-radius: var(--ds-border-radius-md);
-  box-shadow: var(--ds-shadow-md);
 }
 
 .map-title {
