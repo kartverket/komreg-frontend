@@ -6,7 +6,7 @@ export const MapContext = createContext<OlMap | null>(null);
 export function useMap() {
   const map = useContext(MapContext);
   if (!map) {
-    throw new Error("useMap must be used within a MapProvider");
+    throw new Error("useMap must be used within a Map component");
   }
   return map;
 }
