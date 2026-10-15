@@ -1,0 +1,3 @@
+.active {
+  background-color: color-mix(in srgb, var(--ds-color-base-default), black 40%);
+}
