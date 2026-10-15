@@ -15,9 +15,8 @@ describe("App", () => {
     expect(screen.getByRole("navigation")).toBeVisible();
   });
 
-  it("opens the map full screen, without the nav, and goes back", async () => {
-    renderAt("/");
-    await userEvent.click(await screen.findByRole("link", { name: "Kart" }));
+  it("shows the map full screen, without the nav, and goes back", async () => {
+    renderAt("/kart");
     expect(await screen.findByRole("region", { name: "Kart over Norge" })).toBeInTheDocument();
     // Visually hidden, but the page still has an h1 for screen readers.
     expect(screen.getByRole("heading", { level: 1, name: "Kart" })).toBeInTheDocument();
@@ -25,6 +24,20 @@ describe("App", () => {
 
     await userEvent.click(screen.getByRole("link", { name: "Forsiden" }));
     expect(await screen.findByRole("heading", { level: 1, name: "KomReg" })).toBeVisible();
+  });
+
+  it("selects map layers from the toolbar", async () => {
+    renderAt("/kart");
+
+    await userEvent.click(await screen.findByRole("button", { name: "Velg kartlag" }));
+    const propertyBoundaries = screen.getByRole("button", {
+      name: "Eiendomsgrenser",
+      hidden: true,
+    });
+    expect(propertyBoundaries).toHaveAttribute("aria-pressed", "false");
+
+    await userEvent.click(propertyBoundaries);
+    expect(propertyBoundaries).toHaveAttribute("aria-pressed", "true");
   });
 
   it("shows a not-found page for an unknown path", async () => {

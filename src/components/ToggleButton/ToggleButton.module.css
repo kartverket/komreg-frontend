@@ -1,3 +1,4 @@
 .active {
-  background-color: color-mix(in srgb, var(--ds-color-base-default), black 40%);
+  color: var(--ds-color-base-default);
+  background-color: var(--ds-color-surface-tinted);
 }

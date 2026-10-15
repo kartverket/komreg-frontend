@@ -6,6 +6,7 @@ import { Toolbar } from "@/components/Toolbar/Toolbar";
 
 import { Map } from "@/components/Map/_Map";
 import { MapDrawing } from "@/components/Map/Drawing";
+import { MapLayerSelect } from "@/components/MapLayerSelect/MapLayerSelect";
 
 export function MapPage() {
   const norgeskartTileUrl =
@@ -20,7 +21,7 @@ export function MapPage() {
         <XYZLayer tileUrl={norgeskartTileUrl} />
         <Toolbar>
           <MapDrawing />
-          {/* Additional toggle buttons can be added here */}
+          <MapLayerSelect />
         </Toolbar>
       </Map>
       <div className="map-panel">
