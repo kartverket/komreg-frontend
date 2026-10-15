@@ -8,7 +8,8 @@
 
 body {
   margin: 0;
-  font-family: "Inter", sans-serif;
+  font-family: var(--ds-font-family);
+  font-size: var(--ds-body-sm-font-size);
   font-optical-sizing: auto;
   font-feature-settings: "cv05" 1;
   background: var(--ds-color-neutral-background-default);
@@ -43,4 +44,8 @@ main {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+.ol-layer-eiendom {
+  filter: saturate(1.9) contrast(1.5) brightness(0.78) drop-shadow(0 0 0.5px rgb(200 0 0 / 0.9));
 }

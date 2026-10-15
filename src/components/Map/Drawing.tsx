@@ -17,8 +17,11 @@ export function MapDrawing() {
   return (
     <>
       <Tooltip content={`Skru ${isMeasuringActive ? "av" : "på"} tegneverktøyet`}>
-        <ToggleButton isActive={isMeasuringActive} onToggle={setIsMeasuringActive}>
-          <PencilLineIcon fontSize="1.5rem" aria-hidden />
+        <ToggleButton
+          isActive={isMeasuringActive}
+          onToggle={() => setIsMeasuringActive(!isMeasuringActive)}
+        >
+          <PencilLineIcon aria-hidden />
         </ToggleButton>
       </Tooltip>
       {isMeasuringActive && <DrawingInteraction />}

@@ -5,7 +5,8 @@
   transform: translateX(-50%);
   display: flex;
   gap: var(--ds-size-2);
-  background-color: var(--ds-color-surface-tinted);
   padding: var(--ds-size-2);
+  background-color: var(--ds-color-surface-default);
   border-radius: var(--ds-border-radius-lg);
+  box-shadow: var(--ds-shadow-sm);
 }
