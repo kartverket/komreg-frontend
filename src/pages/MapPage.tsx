@@ -3,8 +3,7 @@ import { Link as RouterLink } from "@tanstack/react-router";
 import { Button, Heading } from "@kv-designsystem/react";
 import { ArrowLeftIcon } from "@navikt/aksel-icons";
 import { Toolbar } from "@/components/Toolbar/Toolbar";
-
-import { Map } from "@/components/Map/_Map";
+import { Map as OlMap } from "@/components/Map/_Map";
 import { MapDrawing } from "@/components/Map/Drawing";
 import { MatrikkelenhetClick } from "@/components/MatrikkelenhetClick";
 
@@ -17,14 +16,14 @@ export function MapPage() {
       <Heading level={1} className="map-title">
         Kart
       </Heading>
-      <Map>
+      <OlMap>
         <XYZLayer tileUrl={norgeskartTileUrl} />
         <Toolbar>
           <MapDrawing />
           <MatrikkelenhetClick />
           {/* Additional toggle buttons can be added here */}
         </Toolbar>
-      </Map>
+      </OlMap>
       <div className="map-panel">
         <Button asChild variant="primary" data-size="sm">
           <RouterLink to="/">
