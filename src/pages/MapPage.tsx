@@ -6,6 +6,7 @@ import { Toolbar } from "@/components/Toolbar/Toolbar";
 
 import { Map } from "@/components/Map/_Map";
 import { MapDrawing } from "@/components/Map/Drawing";
+import { MatrikkelenhetClick } from "@/components/MatrikkelenhetClick";
 
 export function MapPage() {
   const norgeskartTileUrl =
@@ -20,6 +21,7 @@ export function MapPage() {
         <XYZLayer tileUrl={norgeskartTileUrl} />
         <Toolbar>
           <MapDrawing />
+          <MatrikkelenhetClick />
           {/* Additional toggle buttons can be added here */}
         </Toolbar>
       </Map>
