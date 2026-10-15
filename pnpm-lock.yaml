@@ -201,8 +201,8 @@ importers:
         specifier: 8.0.7
         version: 8.0.7
       '@kv-designsystem/theme':
-        specifier: 1.0.0-alpha.3
-        version: 1.0.0-alpha.3
+        specifier: 1.0.0-alpha.4
+        version: 1.0.0-alpha.4
       '@rolldown/plugin-babel':
         specifier: 0.2.4
         version: 0.2.4(@babel/core@8.0.7)(@babel/runtime@7.29.7)(@voidzero-dev/vite-plus-core@1.0.0(@types/node@24.19.1)(typescript@7.0.2))(rolldown@1.2.10)
@@ -390,9 +390,6 @@ packages:
       react: '>=18.3.1 || ^19.0.0'
       react-dom: '>=18.3.1 || ^19.0.0'
 
-  '@digdir/designsystemet-types@1.22.0':
-    resolution: {integrity: sha512-VsWH7iFAUBvRCVWuL/ukv1W3xgRH+7Ubbmmf9l7iRAqOFqn8J4GmdzD25YewDjGWUgiDs5rNsTgorK7KS+50WA==}
-
   '@digdir/designsystemet-types@1.23.0':
     resolution: {integrity: sha512-fUDl1bMAWlV2pyo1GlWaN5heuVZNdNMW3/hEgzmYxQcCtaq0g8lNKsUt2GZEeWR5vKE1dfxahsOdKW1E9Udpyg==}
 
@@ -454,9 +451,6 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
-
-  '@kv-designsystem/theme@1.0.0-alpha.3':
-    resolution: {integrity: sha512-akPedsOt1ZqG4RfSvFfnQZ9KUa/lpz8LjzyM23V86/0hRTG6A4+1vNHMvK+Aljii+ex4fjS3wH202nA+zIwbHA==}
 
   '@kv-designsystem/theme@1.0.0-alpha.4':
     resolution: {integrity: sha512-xXwaB5WpYQbdLZWM6wsTU48kU3mzSvDZE1xU8wa09pva+8lq+w+k0XteVP3CpIpE7FFRbu1RwnWjLOYpPE5atA==}
@@ -2274,8 +2268,6 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@digdir/designsystemet-types@1.22.0': {}
-
   '@digdir/designsystemet-types@1.23.0': {}
 
   '@digdir/designsystemet-web@1.23.0':
@@ -2345,10 +2337,6 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.3.0
-
-  '@kv-designsystem/theme@1.0.0-alpha.3':
-    dependencies:
-      '@digdir/designsystemet-types': 1.22.0
 
   '@kv-designsystem/theme@1.0.0-alpha.4':
     dependencies:
