@@ -1,7 +1,7 @@
 import { Tooltip } from "@kv-designsystem/react";
 import { ToggleButton } from "./ToggleButton/ToggleButton";
 import { NotePencilDashIcon } from "@navikt/aksel-icons";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useMap } from "./Map/MapContext";
 import { Feature, type MapBrowserEvent } from "ol";
 import type { Coordinate } from "ol/coordinate";
@@ -42,18 +42,23 @@ const matrikkelenhetLayerStyle = new Style({
   stroke: new Stroke({ color: "#1a833b", width: 3 }),
 });
 
-export function MatrikkelenhetSelector() {
-  const [isEnhetClickActive, setIsEnhetClickActive] = useState(false);
+export function MatrikkelenhetSelector({
+  isActive,
+  onToggle,
+}: {
+  isActive: boolean;
+  onToggle: (isActive: boolean) => void;
+}) {
   const { teiger } = useTeiger();
   return (
     <>
-      <Tooltip content={`Skru ${isEnhetClickActive ? "av" : "på"} henting av matrikkelenheter`}>
-        <ToggleButton isActive={isEnhetClickActive} onToggle={setIsEnhetClickActive}>
+      <Tooltip content={`Skru ${isActive ? "av" : "på"} henting av matrikkelenheter`}>
+        <ToggleButton isActive={isActive} onToggle={onToggle}>
           <NotePencilDashIcon fontSize="1.5rem" aria-hidden />
         </ToggleButton>
       </Tooltip>
       <VectorLayer style={matrikkelenhetLayerStyle}>
-        {isEnhetClickActive && <MapClickInteraction />}
+        {isActive && <MapClickInteraction />}
         {Array.from(teiger.values()).map((teig) => (
           <Teig key={teig.properties.lokalid} geometry={teig.geometry} />
         ))}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useMap } from "./MapContext";
 import { useVectorSource } from "./VectorLayerContext";
 import Draw from "ol/interaction/Draw";
@@ -16,21 +16,32 @@ const style = [
   new Style({ stroke: new Stroke({ color: "#ffffff", width: 8 }) }),
   new Style({ stroke: new Stroke({ color: "#1a833b", width: 4 }) }),
 ];
-export function MapDrawing() {
+export function MapDrawing({
+  isActive,
+  onToggle,
+}: {
+  isActive: boolean;
+  onToggle: (isActive: boolean) => void;
+}) {
   return (
     <VectorLayer style={style}>
-      <DrawingControls />
+      <DrawingControls isActive={isActive} onToggle={onToggle} />
     </VectorLayer>
   );
 }
 
-function DrawingControls() {
-  const [isMeasuringActive, setIsMeasuringActive] = useState(false);
+function DrawingControls({
+  isActive,
+  onToggle,
+}: {
+  isActive: boolean;
+  onToggle: (isActive: boolean) => void;
+}) {
   const source = useVectorSource();
 
   return (
     <div className={styles.buttoncontainer}>
-      {isMeasuringActive && (
+      {isActive && (
         <Button
           className={styles.clearbutton}
           icon
@@ -43,12 +54,12 @@ function DrawingControls() {
           <XMarkIcon></XMarkIcon>
         </Button>
       )}
-      <Tooltip content={`Skru ${isMeasuringActive ? "av" : "på"} tegneverktøyet`}>
-        <ToggleButton isActive={isMeasuringActive} onToggle={setIsMeasuringActive}>
+      <Tooltip content={`Skru ${isActive ? "av" : "på"} tegneverktøyet`}>
+        <ToggleButton isActive={isActive} onToggle={onToggle}>
           <PencilLineIcon fontSize="1.5rem" aria-hidden />
         </ToggleButton>
       </Tooltip>
-      {isMeasuringActive && <DrawingInteraction />}
+      {isActive && <DrawingInteraction />}
     </div>
   );
 }

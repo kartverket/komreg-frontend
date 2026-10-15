@@ -6,8 +6,10 @@ import { Toolbar } from "@/components/Toolbar/Toolbar";
 import { Map as OlMap } from "@/components/Map/_Map";
 import { MapDrawing } from "@/components/Map/Drawing";
 import { MatrikkelenhetSelector } from "@/components/MatrikkelenhetSelector";
+import { useState } from "react";
 
 export function MapPage() {
+  const [activeTool, setActiveTool] = useState<"drawing" | "parcel" | null>(null);
   const norgeskartTileUrl =
     "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png";
 
@@ -19,8 +21,14 @@ export function MapPage() {
       <OlMap>
         <XYZLayer tileUrl={norgeskartTileUrl} />
         <Toolbar>
-          <MapDrawing />
-          <MatrikkelenhetSelector />
+          <MapDrawing
+            isActive={activeTool === "drawing"}
+            onToggle={(isActive) => setActiveTool(isActive ? "drawing" : null)}
+          />
+          <MatrikkelenhetSelector
+            isActive={activeTool === "parcel"}
+            onToggle={(isActive) => setActiveTool(isActive ? "parcel" : null)}
+          />
         </Toolbar>
       </OlMap>
       <div className="map-panel">
