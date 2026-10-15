@@ -1,0 +1,15 @@
+{
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "description": "Keep vite-plus, its core alias and vitest in lockstep",
+      "groupName": "vite+",
+      "matchPackageNames": [
+        "vite-plus",
+        "@voidzero-dev/vite-plus-*",
+        "vitest",
+        "@vitest/coverage-*"
+      ]
+    }
+  ]
+}
