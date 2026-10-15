@@ -42,7 +42,7 @@ const matrikkelenhetLayerStyle = new Style({
   stroke: new Stroke({ color: "#1a833b", width: 3 }),
 });
 
-export function MatrikkelenhetClick() {
+export function MatrikkelenhetSelector() {
   const [isEnhetClickActive, setIsEnhetClickActive] = useState(false);
   const { teiger } = useTeiger();
   return (

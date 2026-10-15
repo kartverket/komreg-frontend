@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { EiendomResponse } from "@/components/MatrikkelenhetClick";
+import type { EiendomResponse } from "@/components/MatrikkelenhetSelector";
 
 export const useTeiger = create<{
   teiger: Map<number, EiendomResponse>;

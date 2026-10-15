@@ -5,7 +5,7 @@ import { ArrowLeftIcon } from "@navikt/aksel-icons";
 import { Toolbar } from "@/components/Toolbar/Toolbar";
 import { Map as OlMap } from "@/components/Map/_Map";
 import { MapDrawing } from "@/components/Map/Drawing";
-import { MatrikkelenhetClick } from "@/components/MatrikkelenhetClick";
+import { MatrikkelenhetSelector } from "@/components/MatrikkelenhetSelector";
 
 export function MapPage() {
   const norgeskartTileUrl =
@@ -20,8 +20,7 @@ export function MapPage() {
         <XYZLayer tileUrl={norgeskartTileUrl} />
         <Toolbar>
           <MapDrawing />
-          <MatrikkelenhetClick />
-          {/* Additional toggle buttons can be added here */}
+          <MatrikkelenhetSelector />
         </Toolbar>
       </OlMap>
       <div className="map-panel">
