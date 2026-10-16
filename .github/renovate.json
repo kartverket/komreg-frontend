@@ -1,6 +1,21 @@
 {
   "extends": ["config:recommended"],
+  "timezone": "Europe/Oslo",
+  "schedule": ["* 3 * * 1"],
+  "prConcurrentLimit": 10,
   "packageRules": [
+    {
+      "description": "Group non-major updates",
+      "groupName": "non-major updates",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "Keep the current Node.js type major",
+      "matchPackageNames": ["@types/node"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
     {
       "description": "Keep vite-plus, its core alias and vitest in lockstep",
       "groupName": "vite+",
