@@ -66,12 +66,25 @@ export function MatrikkelenhetSelector({
     </>
   );
 }
+function checkIfCoordinateIntersectsPolygon(
+  coordinate: Coordinate,
+  polygonCoordinates: Coordinate[][],
+): boolean {
+  return new Polygon(polygonCoordinates).intersectsCoordinate(coordinate);
+}
 
 function MapClickInteraction() {
   const map = useMap();
   const { addTeig, removeTeig, teiger } = useTeiger();
 
   async function handleMapClick(e: MapBrowserEvent) {
+    for (const [lokalid, teig] of teiger) {
+      if (checkIfCoordinateIntersectsPolygon(e.coordinate, teig.geometry.coordinates)) {
+        removeTeig(lokalid);
+        return;
+      }
+    }
+
     const data = await fetchGeoJSON(e.coordinate);
     if (!data) {
       console.log("No features found at clicked location");
