@@ -7,6 +7,7 @@ import { Map as OlMap } from "@/components/Map/_Map";
 import { MapDrawing } from "@/components/Map/Drawing";
 import { MatrikkelenhetSelector } from "@/components/MatrikkelenhetSelector";
 import { useState } from "react";
+import { MapLayerSelect } from "@/components/MapLayerSelect/MapLayerSelect";
 
 export function MapPage() {
   const [activeTool, setActiveTool] = useState<"drawing" | "parcel" | null>(null);
@@ -29,6 +30,7 @@ export function MapPage() {
             isActive={activeTool === "parcel"}
             onToggle={(isActive) => setActiveTool(isActive ? "parcel" : null)}
           />
+          <MapLayerSelect />
         </Toolbar>
       </OlMap>
       <div className="map-panel">
