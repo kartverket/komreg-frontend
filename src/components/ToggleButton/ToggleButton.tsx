@@ -1,7 +1,7 @@
 import { Button, type ButtonProps } from "@kv-designsystem/react";
 import styles from "./ToggleButton.module.css";
 
-type ToggleButtonProps = Omit<ButtonProps, "children" | "onClick" | "variant"> & {
+type ToggleButtonProps = Omit<ButtonProps, "children" | "onClick" | "onToggle" | "variant"> & {
   isActive: boolean;
   onToggle: (isActive: boolean) => void;
   children: React.ReactNode;
