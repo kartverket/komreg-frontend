@@ -75,37 +75,37 @@ function checkIfCoordinateIntersectsPolygon(
 
 function MapClickInteraction() {
   const map = useMap();
-  const { addTeig, removeTeig, teiger } = useTeiger();
 
-  async function handleMapClick(e: MapBrowserEvent) {
-    for (const [lokalid, teig] of teiger) {
-      if (checkIfCoordinateIntersectsPolygon(e.coordinate, teig.geometry.coordinates)) {
-        removeTeig(lokalid);
+  useEffect(() => {
+    let active = true;
+
+    async function handleMapClick(e: MapBrowserEvent) {
+      for (const [lokalid, teig] of useTeiger.getState().teiger) {
+        if (checkIfCoordinateIntersectsPolygon(e.coordinate, teig.geometry.coordinates)) {
+          useTeiger.getState().removeTeig(lokalid);
+          return;
+        }
+      }
+
+      let data: EiendomResponse | undefined;
+      try {
+        data = await fetchGeoJSON(e.coordinate);
+      } catch (error) {
+        console.error("Failed to retrieve matrikkelenhet", error);
         return;
+      }
+
+      if (data && active) {
+        useTeiger.getState().addTeig(data.properties.lokalid, data);
       }
     }
 
-    let data: EiendomResponse | undefined;
-    try {
-      data = await fetchGeoJSON(e.coordinate);
-    } catch (error) {
-      console.error("Failed to retrieve matrikkelenhet", error);
-      return;
-    }
-
-    if (!data) {
-      return;
-    }
-
-    addTeig(data.properties.lokalid, data);
-  }
-
-  useEffect(() => {
     map.on("click", handleMapClick);
     return () => {
+      active = false;
       map.un("click", handleMapClick);
     };
-  });
+  }, [map]);
 
   return null;
 }
