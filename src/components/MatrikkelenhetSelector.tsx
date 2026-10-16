@@ -85,14 +85,15 @@ function MapClickInteraction() {
       }
     }
 
-    const data = await fetchGeoJSON(e.coordinate);
-    if (!data) {
-      console.log("No features found at clicked location");
+    let data: EiendomResponse | undefined;
+    try {
+      data = await fetchGeoJSON(e.coordinate);
+    } catch (error) {
+      console.error("Failed to retrieve matrikkelenhet", error);
       return;
     }
 
-    if (teiger.has(data.properties.lokalid)) {
-      removeTeig(data.properties.lokalid);
+    if (!data) {
       return;
     }
 
@@ -112,6 +113,9 @@ function MapClickInteraction() {
 async function fetchGeoJSON(coordinates: Coordinate): Promise<EiendomResponse | undefined> {
   const url = `https://api.kartverket.no/eiendom/v1/punkt/omrader?ost=${coordinates[0]}&nord=${coordinates[1]}&koordsys=3857&utkoordsys=3857`;
   const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Kartverket API returned HTTP ${res.status}`);
+  }
   const data = (await res.json()) as { crs: unknown; features: EiendomResponse[] };
   if (!data.features || data.features.length === 0) {
     return undefined;
