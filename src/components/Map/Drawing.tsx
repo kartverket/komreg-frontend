@@ -82,7 +82,10 @@ function DrawingInteraction() {
     });
     draw.setActive(true);
     map.addInteraction(draw);
+    const abortDrawing = () => draw.abortDrawing();
+    source.on("clear", abortDrawing);
     return () => {
+      source.un("clear", abortDrawing);
       map.removeInteraction(draw);
     };
   }, [map, source]);
