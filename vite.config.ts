@@ -4,7 +4,9 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
 
 export default defineConfig({
-  fmt: {},
+  fmt: {
+    ignorePatterns: [".security/risc/*.risc.yaml"],
+  },
   lint: {
     plugins: ["react", "typescript", "oxc", "unicorn", "vitest"],
     // Oxlint's default rule set (correctness) only warns, and warnings don't fail `vp check`,
