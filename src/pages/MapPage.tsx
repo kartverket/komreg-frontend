@@ -4,6 +4,7 @@ import { Button, Heading } from "@kv-designsystem/react";
 import { ArrowLeftIcon } from "@navikt/aksel-icons";
 import { Toolbar } from "@/components/Toolbar/Toolbar";
 import { Map as OlMap } from "@/components/Map/_Map";
+import { MapSearch } from "@/components/Toolbar/MapSearch";
 import { MapDrawing } from "@/components/Map/Drawing";
 import { MatrikkelenhetSelector } from "@/components/MatrikkelenhetSelector";
 import { useState } from "react";
@@ -30,6 +31,7 @@ export function MapPage() {
             isActive={activeTool === "parcel"}
             onToggle={(isActive) => setActiveTool(isActive ? "parcel" : null)}
           />
+          <MapSearch />
           <MapLayerSelect />
         </Toolbar>
       </OlMap>
