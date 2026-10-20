@@ -1,0 +1,16 @@
+.infoBox {
+  position: absolute;
+  bottom: calc(100% + var(--ds-size-3));
+  left: 50%;
+  width: max-content;
+  max-width: min(52ch, calc(100vw - 2 * var(--ds-size-3)));
+  box-sizing: border-box;
+  transform: translateX(-50%);
+  padding: var(--ds-size-2) var(--ds-size-3);
+  border: 2px solid var(--ds-color-base-default);
+  border-radius: var(--ds-border-radius-md);
+  background: var(--ds-color-surface-tinted);
+  box-shadow: var(--ds-shadow-sm);
+  font-size: var(--ds-body-sm-font-size);
+  font-weight: var(--ds-font-weight-medium);
+}

@@ -12,6 +12,7 @@ import Polygon from "ol/geom/Polygon";
 import { VectorLayer } from "./Map/VectorLayer";
 import { useVectorSource } from "./Map/VectorLayerContext";
 import { useTeiger } from "@/hooks/useTeiger";
+import { ToolInfoBox } from "./Toolbar/ToolInfoBox";
 
 export type EiendomResponse = {
   geometry: {
@@ -57,6 +58,10 @@ export function MatrikkelenhetSelector({
           <NotePencilDashIcon fontSize="1.5rem" aria-hidden />
         </ToggleButton>
       </Tooltip>
+      <ToolInfoBox isActive={isActive}>
+        Hold inne Cmd (Mac) eller Ctrl (Windows) og dra for å velge flere matrikkelenheter. Hold også
+        Shift for å fjerne.
+      </ToolInfoBox>
       <VectorLayer style={matrikkelenhetLayerStyle}>
         {isActive && <MapClickInteraction />}
         {Array.from(teiger.values()).map((teig) => (
