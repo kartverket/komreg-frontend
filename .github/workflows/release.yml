@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+      - uses: voidzero-dev/setup-vp@68f39c78aaf39be468cabd2afb09c162574c84af # v1.21.2
         with:
           node-version: "24"
           cache: true
@@ -67,7 +67,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: kartverket/pharos@446d11f033ffe30b4c91f885c3ad34ea3d8c6af7 # v0.7.0
+      - uses: kartverket/pharos@aee5b200a4bb042954127dd1446408d2841fcc29 # v0.7.1
         with:
           allow_severity_level: critical
           image_url: ${{ needs.build.outputs.image_url }}
