@@ -3,6 +3,7 @@ import { Link as RouterLink } from "@tanstack/react-router";
 import { Button, Heading } from "@kv-designsystem/react";
 import { ArrowLeftIcon } from "@navikt/aksel-icons";
 import { Toolbar } from "@/components/Toolbar/Toolbar";
+import { MapSearch } from "@/components/Toolbar/MapSearch";
 
 import { Map } from "@/components/Map/_Map";
 import { MapDrawing } from "@/components/Map/Drawing";
@@ -20,6 +21,7 @@ export function MapPage() {
       <Map>
         <XYZLayer tileUrl={norgeskartTileUrl} />
         <Toolbar>
+          <MapSearch />
           <MapDrawing />
           <MapLayerSelect />
         </Toolbar>
