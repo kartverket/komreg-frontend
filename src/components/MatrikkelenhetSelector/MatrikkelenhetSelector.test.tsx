@@ -1,13 +1,11 @@
 import { render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { Map as OlMap } from "./Map/_Map";
-import {
-  MatrikkelenhetSelector,
-  type EiendomResponse,
-} from "./MatrikkelenhetSelector/MatrikkelenhetSelector";
+import type { TeigResponse } from "@/types/TeigResponse";
+import { Map as OlMap } from "@/components/Map/_Map";
+import { MatrikkelenhetSelector } from "./MatrikkelenhetSelector";
 import { useTeiger } from "@/hooks/useTeiger";
 import { useEffect } from "react";
-import { useMap } from "./Map/MapContext";
+import { useMap } from "@/components/Map/MapContext";
 import { MapBrowserEvent, type Map as OlMapType } from "ol";
 
 function MapCapture({ onMap }: { onMap: (map: OlMapType) => void }) {
@@ -39,7 +37,7 @@ function renderSelector(isActive: boolean, onToggle = vi.fn<(isActive: boolean) 
 
 // Builds a fake API response for one spot of land ("teig"). Only fields the component
 // actually reads are filled in with real values; everything else is irrelevant filler.
-function buildEiendomResponse(lokalid: number): EiendomResponse {
+function buildEiendomResponse(lokalid: number): TeigResponse {
   return {
     type: "Feature",
     geometry: {

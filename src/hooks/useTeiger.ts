@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { TeigResponse } from "@/components/MatrikkelenhetSelector/MatrikkelenhetSelector";
+import type { TeigResponse } from "@/types/TeigResponse";
 
 export const useTeiger = create<{
   teiger: Map<number, TeigResponse>;
