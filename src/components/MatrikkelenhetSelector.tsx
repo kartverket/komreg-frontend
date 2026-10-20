@@ -12,6 +12,9 @@ import Polygon from "ol/geom/Polygon";
 import { VectorLayer } from "./Map/VectorLayer";
 import { useVectorSource } from "./Map/VectorLayerContext";
 import { useTeiger } from "@/hooks/useTeiger";
+import WFS from "ol/format/WFS";
+import Point from "ol/geom/Point";
+import { intersects, within } from "ol/format/filter";
 
 export type EiendomResponse = {
   geometry: {
@@ -80,6 +83,75 @@ function MapClickInteraction() {
     let active = true;
 
     async function handleMapClick(e: MapBrowserEvent) {
+      //detect shift key was pressed while clicking. e.shiftKey does not exist
+      console.log(e);
+      if (e.originalEvent?.shiftKey) {
+        console.log("Shift key pressed during map click");
+        const wfsUrl = "https://wfs.geonorge.no/skwms1/wfs.grunnkretser";
+
+        const wfsFormat = new WFS({ version: "2.0.0" });
+
+        const point = new Point(e.coordinate);
+
+        const node = wfsFormat.writeGetFeature({
+          srsName: "EPSG:3857",
+          featureTypes: ["app:Grunnkrets"],
+          featureNS:
+            "https://skjema.geonorge.no/SOSI/produktspesifikasjon/StatEnheterGrunnkretser/20240101",
+          featurePrefix: "app",
+          filter: intersects("område", point, "EPSG:3857"),
+        });
+
+        const res = await fetch(wfsUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/xml" },
+          body: new XMLSerializer().serializeToString(node),
+        });
+
+        if (!res.ok) {
+          console.error(`WFS request failed with status ${res.status}`);
+          return;
+        }
+        const features = wfsFormat.readFeatures(await res.text());
+
+        const grunnkrets = features.at(0);
+        const grunnkretsGeometry = grunnkrets?.getGeometry();
+        if (!grunnkrets || !grunnkretsGeometry) {
+          console.error("No grunnkrets found for the clicked point");
+          return;
+        }
+
+        const node2 = wfsFormat.writeGetFeature({
+          srsName: "EPSG:3857",
+          featureTypes: ["app:Teig"],
+          featureNS:
+            "http://skjema.geonorge.no/SOSI/produktspesifikasjon/Matrikkelen-Eiendomskart-Teig/20211101",
+          featurePrefix: "app",
+          filter: within("representasjonspunkt", grunnkretsGeometry, "EPSG:3857"),
+        });
+
+        const res2 = await fetch(
+          "https://wfs.geonorge.no/skwms1/wfs.matrikkelen-eiendomskart-teig",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/xml" },
+            body: new XMLSerializer().serializeToString(node2),
+          },
+        );
+
+        const features2 = wfsFormat.readFeatures(await res2.text());
+
+        const teigerFraGrunnkrets = features2
+          .map(teigFeatureToEiendomResponse)
+          .filter((teig) => teig !== undefined);
+
+        for (const teig of teigerFraGrunnkrets) {
+          useTeiger.getState().addTeig(teig.properties.lokalid, teig);
+        }
+
+        return; // Skip handling the click if the control key is pressed
+      }
+
       for (const [lokalid, teig] of useTeiger.getState().teiger) {
         if (checkIfCoordinateIntersectsPolygon(e.coordinate, teig.geometry.coordinates)) {
           useTeiger.getState().removeTeig(lokalid);
@@ -96,6 +168,7 @@ function MapClickInteraction() {
       }
 
       if (data && active) {
+        console.log(data.properties.lokalid);
         useTeiger.getState().addTeig(data.properties.lokalid, data);
       }
     }
@@ -108,6 +181,50 @@ function MapClickInteraction() {
   }, [map]);
 
   return null;
+}
+
+// Normalizes a `Feature` read from the app:Teig WFS (wfs.matrikkelen-eiendomskart-teig)
+// into the same shape as teiger fetched from the Kartverket REST API, so both
+// sources can be rendered/stored identically.
+function teigFeatureToEiendomResponse(feature: Feature): EiendomResponse | undefined {
+  const geometry = feature.getGeometry();
+  if (!(geometry instanceof Polygon)) {
+    console.error("Teig has unexpected geometry type", feature.getId());
+    return undefined;
+  }
+
+  // gml:id has the form "teig.<teigId>" – teigId doubles as the lokalid.
+  const lokalid = Number(feature.getId()?.toString().split(".").at(1));
+  if (Number.isNaN(lokalid)) {
+    console.error("Could not parse teig lokalid from", feature.getId());
+    return undefined;
+  }
+
+  const props = feature.getProperties();
+
+  return {
+    type: "Feature",
+    geometry: {
+      type: "Polygon",
+      coordinates: geometry.getCoordinates(),
+    },
+    properties: {
+      bruksnummer: Number(props.bruksnummer) || 0,
+      festenummer: Number(props.festenummer) || 0,
+      gardsnummer: Number(props.gardsnummer) || 0,
+      hovedområde: true,
+      kommunenummer: String(props.kommunenummer ?? ""),
+      lokalid,
+      matrikkelnummertekst: String(props.matrikkelnummerTekst ?? ""),
+      meterFraPunkt: 0,
+      nøyaktighetsklasseteig: String(props.noyaktighetsklasseTeig ?? ""),
+      objekttype: "Teig",
+      oppdateringsdato: String(props.oppdateringsdato ?? ""),
+      seksjonsnummer: Number(props.seksjonsnummer) || 0,
+      teigmedflerematrikkelenheter: Boolean(props.teigMedFlereMatrikkelenheter),
+      uregistrertjordsameie: Boolean(props.uregistrertJordsameie),
+    },
+  };
 }
 
 async function fetchGeoJSON(coordinates: Coordinate): Promise<EiendomResponse | undefined> {
