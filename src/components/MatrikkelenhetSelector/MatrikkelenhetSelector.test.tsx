@@ -1,7 +1,10 @@
 import { render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { Map as OlMap } from "./Map/_Map";
-import { MatrikkelenhetSelector, type EiendomResponse } from "./MatrikkelenhetSelector";
+import {
+  MatrikkelenhetSelector,
+  type EiendomResponse,
+} from "./MatrikkelenhetSelector/MatrikkelenhetSelector";
 import { useTeiger } from "@/hooks/useTeiger";
 import { useEffect } from "react";
 import { useMap } from "./Map/MapContext";
