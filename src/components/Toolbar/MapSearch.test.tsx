@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type OlMap from "ol/Map";
 import { describe, expect, it, vi } from "vite-plus/test";
@@ -42,7 +42,11 @@ describe("MapSearch", () => {
 
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
 
-    expect(screen.getByRole("textbox", { name: "Finn i kartet" })).toHaveFocus();
+    // MapSearch focuses the field inside requestAnimationFrame, so the focus lands a tick
+    // after the keypress; wait for it instead of asserting immediately.
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Finn i kartet" })).toHaveFocus();
+    });
   });
 
   it("gives feedback for an unsupported format without making a request", async () => {
