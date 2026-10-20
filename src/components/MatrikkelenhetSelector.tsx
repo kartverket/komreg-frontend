@@ -78,18 +78,19 @@ function MapClickInteraction() {
 
   useEffect(() => {
     let active = true;
+    const dragSelections: { coordinate: Coordinate; remove: boolean }[] = [];
+    let isProcessingDrag = false;
 
-    async function handleMapClick(e: MapBrowserEvent) {
-      for (const [lokalid, teig] of useTeiger.getState().teiger) {
-        if (checkIfCoordinateIntersectsPolygon(e.coordinate, teig.geometry.coordinates)) {
-          useTeiger.getState().removeTeig(lokalid);
-          return;
-        }
-      }
+    function findSelectedTeig(coordinate: Coordinate) {
+      return Array.from(useTeiger.getState().teiger).find(([, teig]) =>
+        checkIfCoordinateIntersectsPolygon(coordinate, teig.geometry.coordinates),
+      );
+    }
 
+    async function addTeigAtCoordinate(coordinate: Coordinate) {
       let data: EiendomResponse | undefined;
       try {
-        data = await fetchGeoJSON(e.coordinate);
+        data = await fetchGeoJSON(coordinate);
       } catch (error) {
         console.error("Failed to retrieve matrikkelenhet", error);
         return;
@@ -100,10 +101,50 @@ function MapClickInteraction() {
       }
     }
 
+    async function handleMapClick(e: MapBrowserEvent) {
+      const selectedTeig = findSelectedTeig(e.coordinate);
+      if (selectedTeig) {
+        useTeiger.getState().removeTeig(selectedTeig[0]);
+        return;
+      }
+
+      await addTeigAtCoordinate(e.coordinate);
+    }
+
+    async function processDragCoordinates() {
+      if (isProcessingDrag) return;
+      isProcessingDrag = true;
+
+      while (active && dragSelections.length > 0) {
+        const { coordinate, remove } = dragSelections.shift()!;
+        const selectedTeig = findSelectedTeig(coordinate);
+        if (remove && selectedTeig) {
+          useTeiger.getState().removeTeig(selectedTeig[0]);
+        } else if (!remove && !selectedTeig) {
+          await addTeigAtCoordinate(coordinate);
+        }
+      }
+
+      isProcessingDrag = false;
+    }
+
+    function handleMapDrag(e: MapBrowserEvent) {
+      const pointerEvent = e.originalEvent as PointerEvent;
+      if (pointerEvent.metaKey || pointerEvent.ctrlKey) {
+        dragSelections.push({
+          coordinate: [...e.coordinate],
+          remove: pointerEvent.shiftKey,
+        });
+        void processDragCoordinates();
+      }
+    }
+
     map.on("click", handleMapClick);
+    map.on("pointerdrag", handleMapDrag);
     return () => {
       active = false;
       map.un("click", handleMapClick);
+      map.un("pointerdrag", handleMapDrag);
     };
   }, [map]);
 

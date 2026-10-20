@@ -36,17 +36,17 @@ function renderSelector(isActive: boolean, onToggle = vi.fn<(isActive: boolean) 
 
 // Builds a fake API response for one spot of land ("teig"). Only fields the component
 // actually reads are filled in with real values; everything else is irrelevant filler.
-function buildEiendomResponse(lokalid: number): EiendomResponse {
+function buildEiendomResponse(lokalid: number, east = 0): EiendomResponse {
   return {
     type: "Feature",
     geometry: {
       type: "Polygon",
       coordinates: [
         [
-          [0, 0],
-          [1, 0],
-          [1, 1],
-          [0, 0],
+          [east, 0],
+          [east + 1, 0],
+          [east + 1, 1],
+          [east, 0],
         ],
       ],
     },
@@ -164,6 +164,96 @@ describe("MatrikkelenhetSelector", () => {
 
     await vi.waitFor(() => {
       expect(useTeiger.getState().teiger.has(123)).toBe(true);
+    });
+  });
+
+  it.each([
+    ["Command", { metaKey: true }],
+    ["Control", { ctrlKey: true }],
+  ])("adds a teig while dragging with %s held", async (_key, pointerEventInit) => {
+    const response = buildEiendomResponse(123);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ features: [response] }),
+      }),
+    );
+
+    const { map } = renderSelector(true);
+    const event = new MapBrowserEvent<PointerEvent>(
+      "pointerdrag",
+      map,
+      new PointerEvent("pointermove", pointerEventInit),
+    );
+    event.coordinate = [0.5, 0.25];
+
+    map.dispatchEvent(event);
+
+    await vi.waitFor(() => {
+      expect(useTeiger.getState().teiger.has(123)).toBe(true);
+    });
+  });
+
+  it("adds every teig encountered during a modifier-key drag", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((input: string) => {
+        const east = Number(new URL(input).searchParams.get("ost"));
+        const response = east < 2 ? buildEiendomResponse(123) : buildEiendomResponse(456, 2);
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ features: [response] }),
+        });
+      }),
+    );
+
+    const { map } = renderSelector(true);
+    for (const coordinate of [
+      [0.5, 0.25],
+      [2.5, 0.25],
+    ]) {
+      const event = new MapBrowserEvent<PointerEvent>(
+        "pointerdrag",
+        map,
+        new PointerEvent("pointermove", { metaKey: true }),
+      );
+      event.coordinate = coordinate;
+      map.dispatchEvent(event);
+    }
+
+    await vi.waitFor(() => {
+      expect(useTeiger.getState().teiger.has(123)).toBe(true);
+      expect(useTeiger.getState().teiger.has(456)).toBe(true);
+    });
+  });
+
+  it.each([
+    ["Command", { metaKey: true, shiftKey: true }],
+    ["Control", { ctrlKey: true, shiftKey: true }],
+  ])("removes every selected teig encountered while dragging with %s+Shift", async (_, keys) => {
+    useTeiger.getState().addTeig(123, buildEiendomResponse(123));
+    useTeiger.getState().addTeig(456, buildEiendomResponse(456, 2));
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { map } = renderSelector(true);
+    for (const coordinate of [
+      [0.5, 0.25],
+      [2.5, 0.25],
+    ]) {
+      const event = new MapBrowserEvent<PointerEvent>(
+        "pointerdrag",
+        map,
+        new PointerEvent("pointermove", keys),
+      );
+      event.coordinate = coordinate;
+      map.dispatchEvent(event);
+    }
+
+    await vi.waitFor(() => {
+      expect(useTeiger.getState().teiger.size).toBe(0);
+      expect(fetchMock).not.toHaveBeenCalled();
     });
   });
 
