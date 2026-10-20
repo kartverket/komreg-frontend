@@ -84,7 +84,6 @@ function MapClickInteraction() {
       }
 
       if (data && active) {
-        console.log(data.properties.lokalid);
         useTeiger.getState().addTeig(data.properties.lokalid, data);
       }
     }
