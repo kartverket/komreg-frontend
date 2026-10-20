@@ -33,7 +33,7 @@ describe("parseSearchTarget", () => {
 });
 
 describe("MapSearch", () => {
-  it("opens and focuses the search field with Ctrl+Enter", async () => {
+  it("toggles the search field with Ctrl+Enter", async () => {
     render(
       <MapContext.Provider value={{} as OlMap}>
         <MapSearch />
@@ -43,6 +43,23 @@ describe("MapSearch", () => {
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
 
     expect(screen.getByRole("textbox", { name: "Finn i kartet" })).toHaveFocus();
+
+    await userEvent.keyboard("{Control>}{Enter}{/Control}");
+
+    expect(screen.queryByRole("textbox", { name: "Finn i kartet" })).not.toBeInTheDocument();
+  });
+
+  it("closes the search field with Escape", async () => {
+    render(
+      <MapContext.Provider value={{} as OlMap}>
+        <MapSearch />
+      </MapContext.Provider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Finn i kartet" }));
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByRole("textbox", { name: "Finn i kartet" })).not.toBeInTheDocument();
   });
 
   it("gives feedback for an unsupported format without making a request", async () => {

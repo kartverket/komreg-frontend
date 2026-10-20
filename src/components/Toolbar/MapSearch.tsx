@@ -43,11 +43,16 @@ export function MapSearch() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    if (isOpen) inputRef.current?.focus();
+  }, [isOpen]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
         event.preventDefault();
-        setIsOpen(true);
-        requestAnimationFrame(() => inputRef.current?.focus());
+        setIsOpen((open) => !open);
+      } else if (event.key === "Escape") {
+        setIsOpen(false);
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -147,10 +152,7 @@ export function MapSearch() {
       <Tooltip content="Finn i kartet (Ctrl/⌘ + Enter)">
         <ToggleButton
           isActive={isOpen}
-          onToggle={(open) => {
-            setIsOpen(open);
-            if (open) requestAnimationFrame(() => inputRef.current?.focus());
-          }}
+          onToggle={setIsOpen}
           aria-label="Finn i kartet"
           aria-expanded={isOpen}
         >

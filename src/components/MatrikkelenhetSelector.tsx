@@ -59,8 +59,8 @@ export function MatrikkelenhetSelector({
         </ToggleButton>
       </Tooltip>
       <ToolInfoBox isActive={isActive}>
-        Hold inne Cmd (Mac) eller Ctrl (Windows) og dra for å velge flere matrikkelenheter. Hold også
-        Shift for å fjerne.
+        Hold inne Cmd (Mac) eller Ctrl (Windows) og dra for å velge flere matrikkelenheter. Hold
+        også Shift for å fjerne.
       </ToolInfoBox>
       <VectorLayer style={matrikkelenhetLayerStyle}>
         {isActive && <MapClickInteraction />}

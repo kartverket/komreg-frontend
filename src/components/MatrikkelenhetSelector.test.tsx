@@ -234,7 +234,7 @@ describe("MatrikkelenhetSelector", () => {
   ])("removes every selected teig encountered while dragging with %s+Shift", async (_, keys) => {
     useTeiger.getState().addTeig(123, buildEiendomResponse(123));
     useTeiger.getState().addTeig(456, buildEiendomResponse(456, 2));
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn<typeof fetch>();
     vi.stubGlobal("fetch", fetchMock);
 
     const { map } = renderSelector(true);
