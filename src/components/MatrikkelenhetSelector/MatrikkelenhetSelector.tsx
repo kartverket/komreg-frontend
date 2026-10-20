@@ -52,6 +52,17 @@ function checkIfCoordinateIntersectsPolygon(
   return new Polygon(polygonCoordinates).intersectsCoordinate(coordinate);
 }
 
+async function withWaitCursor<T>(map: ReturnType<typeof useMap>, fn: () => Promise<T>): Promise<T> {
+  const viewport = map.getViewport();
+  if (!viewport) return fn();
+  viewport.style.cursor = "wait";
+  try {
+    return await fn();
+  } finally {
+    viewport.style.cursor = "";
+  }
+}
+
 function MapClickInteraction() {
   const map = useMap();
 
@@ -60,7 +71,9 @@ function MapClickInteraction() {
 
     async function handleMapClick(e: MapBrowserEvent) {
       if (e.originalEvent?.shiftKey) {
-        const teigerFraGrunnkrets = await getAllTeigerInGrunnkretsAtPoint(e.coordinate);
+        const teigerFraGrunnkrets = await withWaitCursor(map, () =>
+          getAllTeigerInGrunnkretsAtPoint(e.coordinate),
+        );
 
         for (const teig of teigerFraGrunnkrets) {
           useTeiger.getState().addTeig(teig.properties.lokalid, teig);
@@ -77,7 +90,7 @@ function MapClickInteraction() {
 
       let data: TeigResponse | undefined;
       try {
-        data = await fetchTeigAtPoint(e.coordinate);
+        data = await withWaitCursor(map, () => fetchTeigAtPoint(e.coordinate));
       } catch (error) {
         console.error("Failed to retrieve matrikkelenhet", error);
         return;
