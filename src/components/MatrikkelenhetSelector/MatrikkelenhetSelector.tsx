@@ -31,7 +31,11 @@ export function MatrikkelenhetSelector({
   return (
     <>
       <Tooltip content={`Skru ${isActive ? "av" : "på"} henting av matrikkelenheter`}>
-        <ToggleButton isActive={isActive} onToggle={onToggle}>
+        <ToggleButton
+          isActive={isActive}
+          onToggle={onToggle}
+          data-testid="matrikkelenhet-selector-toggle-button"
+        >
           <NotePencilDashIcon fontSize="1.5rem" aria-hidden />
         </ToggleButton>
       </Tooltip>
