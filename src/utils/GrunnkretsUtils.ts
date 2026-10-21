@@ -13,10 +13,10 @@ export async function fetchGrunnkretsAtPoint(coordinate: Coordinate): Promise<Fe
 
   const node = wfsFormat.writeGetFeature({
     srsName: "EPSG:3857",
-    featureTypes: ["app:Grunnkrets"],
+    featurePrefix: "app",
+    featureTypes: ["Grunnkrets"],
     featureNS:
       "https://skjema.geonorge.no/SOSI/produktspesifikasjon/StatEnheterGrunnkretser/20240101",
-    featurePrefix: "app",
     filter: intersects("område", point, "EPSG:3857"),
   });
 

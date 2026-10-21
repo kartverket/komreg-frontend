@@ -18,7 +18,7 @@ export type TeigResponse = {
     nøyaktighetsklasseteig: string;
     objekttype: string;
     oppdateringsdato: string;
-    seksjonsnummer: number;
+    seksjonsnummer: number | null;
     teigmedflerematrikkelenheter: boolean;
     uregistrertjordsameie: boolean;
   };

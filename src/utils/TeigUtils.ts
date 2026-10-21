@@ -20,7 +20,7 @@ export async function getAllTeigerInGrunnkretsAtPoint(
     }
 
     const teigerFraGrunnkrets = await fetchTeigerInGeometry(grunnkretsGeometry);
-
+    console.log(teigerFraGrunnkrets);
     return teigerFraGrunnkrets;
   } catch (error) {
     console.error("Failed to get teiger in grunnkrets at point", error);
@@ -32,10 +32,10 @@ export async function fetchTeigerInGeometry(geometry: Geometry): Promise<TeigRes
   const wfsFormat = new WFS({ version: "2.0.0" });
   const node = wfsFormat.writeGetFeature({
     srsName: "EPSG:3857",
-    featureTypes: ["app:Teig"],
+    featurePrefix: "app",
+    featureTypes: ["Teig"],
     featureNS:
       "http://skjema.geonorge.no/SOSI/produktspesifikasjon/Matrikkelen-Eiendomskart-Teig/20211101",
-    featurePrefix: "app",
     filter: within("representasjonspunkt", geometry, "EPSG:3857"),
   });
 
@@ -57,7 +57,11 @@ export async function fetchTeigerInGeometry(geometry: Geometry): Promise<TeigRes
   return features.map(teigFeatureToTeigResponse).filter((teig) => teig !== undefined);
 }
 
-function teigFeatureToTeigResponse(feature: Feature): TeigResponse | undefined {
+function parseBoolean(value: unknown): boolean {
+  return value === true || value === "true";
+}
+
+export function teigFeatureToTeigResponse(feature: Feature): TeigResponse | undefined {
   const geometry = feature.getGeometry();
   if (!(geometry instanceof Polygon)) {
     console.error("Teig has unexpected geometry type", feature.getId());
@@ -80,9 +84,9 @@ function teigFeatureToTeigResponse(feature: Feature): TeigResponse | undefined {
       coordinates: geometry.getCoordinates(),
     },
     properties: {
-      bruksnummer: Number(props.bruksnummer) || 0,
+      bruksnummer: Number(props.matrikkelenhet?.Matrikkelenhet?.bruksnummer) || 0,
       festenummer: Number(props.festenummer) || 0,
-      gardsnummer: Number(props.gardsnummer) || 0,
+      gardsnummer: Number(props.matrikkelenhet?.Matrikkelenhet?.gardsnummer) || 0,
       hovedområde: true,
       kommunenummer: String(props.kommunenummer ?? ""),
       lokalid,
@@ -91,9 +95,9 @@ function teigFeatureToTeigResponse(feature: Feature): TeigResponse | undefined {
       nøyaktighetsklasseteig: String(props.noyaktighetsklasseTeig ?? ""),
       objekttype: "Teig",
       oppdateringsdato: String(props.oppdateringsdato ?? ""),
-      seksjonsnummer: Number(props.seksjonsnummer) || 0,
-      teigmedflerematrikkelenheter: Boolean(props.teigMedFlereMatrikkelenheter),
-      uregistrertjordsameie: Boolean(props.uregistrertJordsameie),
+      seksjonsnummer: props.seksjonsnummer !== undefined ? Number(props.seksjonsnummer) : null,
+      teigmedflerematrikkelenheter: parseBoolean(props.teigMedFlereMatrikkelenheter),
+      uregistrertjordsameie: parseBoolean(props.uregistrertJordsameie),
     },
   };
 }
