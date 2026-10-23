@@ -7,9 +7,9 @@ export type TeigResponse = {
   };
   type: string;
   properties: {
-    bruksnummer: number;
+    bruksnummer: number | null;
     festenummer: number;
-    gardsnummer: number;
+    gardsnummer: number | null;
     hovedområde: boolean;
     kommunenummer: string;
     lokalid: number;
