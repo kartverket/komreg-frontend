@@ -1,18 +1,18 @@
 import { Tooltip } from "@kv-designsystem/react";
 import { ToggleButton } from "../ToggleButton/ToggleButton";
 import { NotePencilDashIcon } from "@navikt/aksel-icons";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useMap } from "../Map/MapContext";
 import { Feature, type MapBrowserEvent } from "ol";
-import type { Coordinate } from "ol/coordinate";
 import Fill from "ol/style/Fill";
 import Style from "ol/style/Style";
 import Stroke from "ol/style/Stroke";
 import Polygon from "ol/geom/Polygon";
+import type VectorSource from "ol/source/Vector";
+import type { Coordinate } from "ol/coordinate";
 import { VectorLayer } from "../Map/VectorLayer";
 import { useVectorSource } from "../Map/VectorLayerContext";
-import { useTeiger } from "@/hooks/useTeiger";
-import { getAllTeigerInGrunnkretsAtPoint, getMatrikkelenhetAtPoint } from "@/utils/TeigUtils";
+import { getMatrikkelenhetAtPoint } from "@/utils/TeigUtils";
 import type { TeigResponse } from "@/types/TeigResponse";
 import type { MatrikkelenhetResponse } from "@/types/Matrikkelenhet";
 import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
@@ -51,13 +51,6 @@ export function MatrikkelenhetSelector({
   );
 }
 
-function checkIfCoordinateIntersectsPolygon(
-  coordinate: Coordinate,
-  polygonCoordinates: Coordinate[][],
-): boolean {
-  return new Polygon(polygonCoordinates).intersectsCoordinate(coordinate);
-}
-
 async function withWaitCursor<T>(map: ReturnType<typeof useMap>, fn: () => Promise<T>): Promise<T> {
   const viewport = map.getViewport();
   if (!viewport) return fn();
@@ -69,13 +62,28 @@ async function withWaitCursor<T>(map: ReturnType<typeof useMap>, fn: () => Promi
   }
 }
 
+const MATRIKKELENHET_ID_KEY = "matrikkelenhetId";
+
+function getMatrikkelenhetIdAtCoordinate(source: VectorSource, coordinate: Coordinate) {
+  return source.getFeaturesAtCoordinate(coordinate).at(0)?.get(MATRIKKELENHET_ID_KEY) as
+    | string
+    | undefined;
+}
+
 function MapClickInteraction() {
   const map = useMap();
+  const source = useVectorSource();
 
   useEffect(() => {
     let active = true;
 
     async function handleMapClick(e: MapBrowserEvent) {
+      const existingEnhetAtPoint = getMatrikkelenhetIdAtCoordinate(source, e.coordinate);
+      if (existingEnhetAtPoint) {
+        useMatrikkelenheter.getState().removeMatrikkelenhet(existingEnhetAtPoint);
+        return;
+      }
+
       let res: MatrikkelenhetResponse | undefined;
       try {
         res = await withWaitCursor(map, () => getMatrikkelenhetAtPoint(e.coordinate));
@@ -94,7 +102,7 @@ function MapClickInteraction() {
       active = false;
       map.un("click", handleMapClick);
     };
-  }, [map]);
+  }, [map, source]);
 
   return null;
 }
@@ -103,23 +111,24 @@ function Matrikkelenhet({ enhet }: { enhet: MatrikkelenhetResponse }) {
   return (
     <>
       {enhet.features.map((teig) => (
-        <Teig key={teig.properties.lokalid} geometry={teig.geometry} />
+        <Teig key={teig.properties.lokalid} geometry={teig.geometry} enhetId={enhet.id} />
       ))}
     </>
   );
 }
 
-function Teig({ geometry }: { geometry: TeigResponse["geometry"] }) {
+function Teig({ geometry, enhetId }: { geometry: TeigResponse["geometry"]; enhetId: string }) {
   const source = useVectorSource();
   useEffect(() => {
     const feature = new Feature({
       geometry: new Polygon(geometry.coordinates),
+      [MATRIKKELENHET_ID_KEY]: enhetId,
     });
     source.addFeature(feature);
     return () => {
       source.removeFeature(feature);
     };
-  }, [geometry, source]);
+  }, [geometry, enhetId, source]);
 
   return null;
 }

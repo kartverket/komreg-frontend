@@ -133,7 +133,7 @@ export async function getMatrikkelenhetAtPoint(
   );
 
   if (!matrikkelenhet.features || matrikkelenhet.features.length === 0) return undefined;
-  return { id: kommunnenummer + "-" + gardsnummer + "-" + bruksnummer, ...matrikkelenhet };
+  return { id: kommunnenummer + "/" + gardsnummer + "/" + bruksnummer, ...matrikkelenhet };
 }
 
 function getAllTeigerForMatrikkelenhet(

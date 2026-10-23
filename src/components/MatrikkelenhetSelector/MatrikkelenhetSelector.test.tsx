@@ -3,11 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import type { TeigResponse } from "@/types/TeigResponse";
 import { Map as OlMap } from "@/components/Map/_Map";
 import { MatrikkelenhetSelector } from "./MatrikkelenhetSelector";
-import { useTeiger } from "@/hooks/useTeiger";
+import type { MatrikkelenhetResponse } from "@/types/Matrikkelenhet";
+import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
 import { useEffect } from "react";
 import { useMap } from "@/components/Map/MapContext";
 import { MapBrowserEvent, type Map as OlMapType } from "ol";
-import * as TeigUtils from "@/utils/TeigUtils";
+import type { Coordinate } from "ol/coordinate";
+import OlVectorLayer from "ol/layer/Vector";
 
 function MapCapture({ onMap }: { onMap: (map: OlMapType) => void }) {
   let map = useMap();
@@ -71,149 +73,108 @@ function buildTeigResponse(lokalid: number): TeigResponse {
   };
 }
 
+function buildMatrikkelenhet(id: string, lokalids: number[]): MatrikkelenhetResponse {
+  return { id, features: lokalids.map(buildTeigResponse) };
+}
+
+// Mocks both API calls made by getMatrikkelenhetAtPoint (teig at point + all teiger for the
+// matrikkelenhet). They share the same response shape, so one mock serves both.
+function stubFetchWithTeiger(teiger: TeigResponse[]) {
+  const mockedFetch = vi
+    .fn<() => Promise<{ ok: boolean; json: () => Promise<{ features: TeigResponse[] }> }>>()
+    .mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ features: teiger }),
+    });
+  vi.stubGlobal("fetch", mockedFetch);
+  return mockedFetch;
+}
+
+function click(map: OlMapType, coordinate: Coordinate) {
+  const event = new MapBrowserEvent<PointerEvent>("click", map, new PointerEvent("click"));
+  event.coordinate = coordinate;
+  map.dispatchEvent(event);
+}
+
+// What is actually drawn: every feature in every vector layer on the map.
+function getMapFeatures(map: OlMapType) {
+  return map
+    .getAllLayers()
+    .flatMap((layer) =>
+      layer instanceof OlVectorLayer ? (layer.getSource()?.getFeatures() ?? []) : [],
+    );
+}
+
+function getMatrikkelenhetIdsInMap(map: OlMapType) {
+  return getMapFeatures(map).map((feature) => feature.get("matrikkelenhetId") as string);
+}
+
+// A point inside the polygon from buildTeigResponse.
+const INSIDE_TEIG: Coordinate = [0.75, 0.25];
+
 describe("MatrikkelenhetSelector", () => {
-  // The teiger ("plots of land") live in a module-level zustand store, so without this
   // reset, state added by one test would leak into the next one.
   beforeEach(() => {
-    useTeiger.getState().clearTeiger();
+    useMatrikkelenheter.getState().clearMatrikkelenheter();
   });
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("does not add a teig if it is deactivated", async () => {
-    const response = buildTeigResponse(123);
-    const mockedFetch = vi
-      .fn<() => Promise<{ ok: boolean; json: () => Promise<{ features: TeigResponse[] }> }>>()
-      .mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ features: [response] }),
-      });
-    vi.stubGlobal("fetch", mockedFetch);
-
+  it("does not fetch or draw anything when the map is clicked while inactive", async () => {
+    const mockedFetch = stubFetchWithTeiger([buildTeigResponse(123)]);
     const { map } = renderSelector(false);
 
-    const event = new MapBrowserEvent<PointerEvent>("click", map, new PointerEvent("click"));
-    event.coordinate = [0, 0];
+    click(map, INSIDE_TEIG);
 
-    map.dispatchEvent(event);
-
-    await vi.waitFor(() => {
-      expect(useTeiger.getState().teiger.size).toBe(0);
-      expect(mockedFetch).toHaveBeenCalledTimes(0);
-    });
+    // Let any (unexpected) async handler settle before asserting the negative.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mockedFetch).not.toHaveBeenCalled();
+    expect(getMapFeatures(map)).toHaveLength(0);
   });
 
-  it("does not add a teig when the fetch rejects", async () => {
+  it("draws nothing when the fetch rejects", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Fetch failed")));
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const { map } = renderSelector(true);
 
-    const event = new MapBrowserEvent<PointerEvent>("click", map, new PointerEvent("click"));
-    event.coordinate = [0, 0];
+    click(map, INSIDE_TEIG);
 
-    map.dispatchEvent(event);
-
-    await vi.waitFor(() => {
-      expect(useTeiger.getState().teiger.size).toBe(0);
-      expect(consoleError).toHaveBeenCalledTimes(1);
-    });
+    await vi.waitFor(() => expect(consoleError).toHaveBeenCalledTimes(1));
+    expect(getMapFeatures(map)).toHaveLength(0);
   });
 
-  it("does not add a teig when the map is clicked while inactive", async () => {
-    const response = buildTeigResponse(123);
-    const mockedFetch = vi
-      .fn<() => Promise<{ ok: boolean; json: () => Promise<{ features: TeigResponse[] }> }>>()
-      .mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ features: [response] }),
-      });
-    vi.stubGlobal("fetch", mockedFetch);
-
-    const { map } = renderSelector(false);
-
-    const event = new MapBrowserEvent<PointerEvent>("click", map, new PointerEvent("click"));
-    event.coordinate = [0, 0];
-
-    map.dispatchEvent(event);
-
-    await vi.waitFor(() => {
-      expect(useTeiger.getState().teiger.size).toBe(0);
-      expect(mockedFetch).toHaveBeenCalledTimes(0);
-    });
-  });
-
-  it("adds a teig when the map is clicked while active", async () => {
-    const response = buildTeigResponse(123);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ features: [response] }),
-      }),
-    );
-
+  it("draws every teig of the matrikkelenhet when the map is clicked while active", async () => {
+    stubFetchWithTeiger([buildTeigResponse(123), buildTeigResponse(321)]);
     const { map } = renderSelector(true);
 
-    const event = new MapBrowserEvent<PointerEvent>("click", map, new PointerEvent("click"));
-    event.coordinate = [0, 0];
-
-    map.dispatchEvent(event);
+    click(map, INSIDE_TEIG);
 
     await vi.waitFor(() => {
-      expect(useTeiger.getState().teiger.has(123)).toBe(true);
+      expect(getMatrikkelenhetIdsInMap(map)).toEqual(["0301/1/1", "0301/1/1"]);
     });
   });
 
-  it("removes a teig when the map is clicked on an existing teig while active", async () => {
-    // Pre-populate the store with a teig so it can be removed.
-    useTeiger.getState().addTeig(123, buildTeigResponse(123));
-
-    const response = buildTeigResponse(123);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ features: [response] }),
-      }),
-    );
-
+  it("removes the whole matrikkelenhet from the map when one of its teiger is clicked", async () => {
+    const mockedFetch = stubFetchWithTeiger([]);
+    const teigElsewhere = buildTeigResponse(3);
+    teigElsewhere.geometry.coordinates = [
+      [
+        [10, 10],
+        [11, 10],
+        [11, 11],
+        [10, 10],
+      ],
+    ];
+    useMatrikkelenheter.getState().addMatrikkelenhet("a", buildMatrikkelenhet("a", [1, 2]));
+    useMatrikkelenheter.getState().addMatrikkelenhet("b", { id: "b", features: [teigElsewhere] });
     const { map } = renderSelector(true);
+    await vi.waitFor(() => expect(getMatrikkelenhetIdsInMap(map).sort()).toEqual(["a", "a", "b"]));
 
-    const event = new MapBrowserEvent<PointerEvent>("click", map, new PointerEvent("click"));
+    click(map, INSIDE_TEIG);
 
-    event.coordinate = [0, 0]; // must be within the polygon of the buildEiendomResponse(123)
-
-    map.dispatchEvent(event);
-
-    await vi.waitFor(() => {
-      expect(useTeiger.getState().teiger.has(123)).toBe(false);
-    });
-  });
-  it("fetches all teiger in a grunnkrets when shift is held while clicking", async () => {
-    const { map } = renderSelector(true);
-
-    const event = new MapBrowserEvent<PointerEvent>(
-      "click",
-      map,
-      new PointerEvent("click", { shiftKey: true }),
-    );
-
-    event.coordinate = [0, 0];
-
-    vi.spyOn(TeigUtils, "getAllTeigerInGrunnkretsAtPoint").mockResolvedValue([
-      buildTeigResponse(123),
-      buildTeigResponse(321),
-      buildTeigResponse(567),
-    ]);
-
-    map.dispatchEvent(event);
-
-    await vi.waitFor(() => {
-      expect(useTeiger.getState().teiger.has(123)).toBe(true);
-      expect(useTeiger.getState().teiger.has(321)).toBe(true);
-      expect(useTeiger.getState().teiger.has(567)).toBe(true);
-    });
+    await vi.waitFor(() => expect(getMatrikkelenhetIdsInMap(map)).toEqual(["b"]));
+    expect(mockedFetch).not.toHaveBeenCalled();
   });
   it("Tooltip has correct text when deactivated", async () => {
     renderSelector(false);
