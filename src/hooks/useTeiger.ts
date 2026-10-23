@@ -1,17 +1,17 @@
 import { create } from "zustand";
-import type { EiendomResponse } from "@/components/MatrikkelenhetSelector";
+import type { TeigResponse } from "@/types/TeigResponse";
 
 export const useTeiger = create<{
-  teiger: Map<number, EiendomResponse>;
-  setTeiger: (teiger: Map<number, EiendomResponse>) => void;
+  teiger: Map<number, TeigResponse>;
+  setTeiger: (teiger: Map<number, TeigResponse>) => void;
   clearTeiger: () => void;
-  addTeig: (lokalid: number, teig: EiendomResponse) => void;
+  addTeig: (lokalid: number, teig: TeigResponse) => void;
   removeTeig: (lokalid: number) => void;
 }>((set) => ({
   teiger: new Map(),
-  setTeiger: (teiger: Map<number, EiendomResponse>) => set({ teiger }),
+  setTeiger: (teiger: Map<number, TeigResponse>) => set({ teiger }),
   clearTeiger: () => set({ teiger: new Map() }),
-  addTeig: (lokalid: number, teig: EiendomResponse) =>
+  addTeig: (lokalid: number, teig: TeigResponse) =>
     set((state) => {
       const teiger = new Map(state.teiger);
       teiger.set(lokalid, teig);
