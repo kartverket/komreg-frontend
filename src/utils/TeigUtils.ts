@@ -6,6 +6,7 @@ import type { Feature } from "ol";
 import Polygon from "ol/geom/Polygon";
 import type { Coordinate } from "ol/coordinate";
 import { fetchGrunnkretsAtPoint } from "@/utils/GrunnkretsUtils";
+import type { MatrikkelenhetResponse } from "@/types/Matrikkelenhet";
 
 export async function getAllTeigerInGrunnkretsAtPoint(
   coordinate: Coordinate,
@@ -20,7 +21,6 @@ export async function getAllTeigerInGrunnkretsAtPoint(
     }
 
     const teigerFraGrunnkrets = await fetchTeigerInGeometry(grunnkretsGeometry);
-    console.log(teigerFraGrunnkrets);
     return teigerFraGrunnkrets;
   } catch (error) {
     console.error("Failed to get teiger in grunnkrets at point", error);
@@ -113,4 +113,41 @@ export async function fetchTeigAtPoint(coordinates: Coordinate): Promise<TeigRes
     return undefined;
   }
   return data.features.at(0);
+}
+
+export async function getMatrikkelenhetAtPoint(
+  coordinates: Coordinate,
+): Promise<MatrikkelenhetResponse | undefined> {
+  const teig = await fetchTeigAtPoint(coordinates);
+  if (!teig) {
+    return undefined;
+  }
+  const kommunnenummer = teig.properties.kommunenummer;
+  const gardsnummer = teig.properties.gardsnummer;
+  const bruksnummer = teig.properties.bruksnummer;
+
+  const matrikkelenhet = await getAllTeigerForMatrikkelenhet(
+    kommunnenummer,
+    gardsnummer,
+    bruksnummer,
+  );
+
+  if (!matrikkelenhet.features || matrikkelenhet.features.length === 0) return undefined;
+  return { id: kommunnenummer + "-" + gardsnummer + "-" + bruksnummer, ...matrikkelenhet };
+}
+
+function getAllTeigerForMatrikkelenhet(
+  kommunenummer: string,
+  gardsnummer: number,
+  bruksnummer: number,
+): Promise<Omit<MatrikkelenhetResponse, "id">> {
+  const url = `https://api.kartverket.no/eiendom/v1/geokoding?kommunenummer=${kommunenummer}&gardsnummer=${gardsnummer}&bruksnummer=${bruksnummer}&omrade=true&utkoordsys=3857`;
+  return fetch(url)
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`Kartverket API returned HTTP ${res.status}`);
+      }
+      return res.json();
+    })
+    .then((data: Omit<MatrikkelenhetResponse, "id">) => data);
 }

@@ -1,7 +1,7 @@
 import { Tooltip } from "@kv-designsystem/react";
 import { ToggleButton } from "../ToggleButton/ToggleButton";
 import { NotePencilDashIcon } from "@navikt/aksel-icons";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useMap } from "../Map/MapContext";
 import { Feature, type MapBrowserEvent } from "ol";
 import type { Coordinate } from "ol/coordinate";
@@ -12,8 +12,10 @@ import Polygon from "ol/geom/Polygon";
 import { VectorLayer } from "../Map/VectorLayer";
 import { useVectorSource } from "../Map/VectorLayerContext";
 import { useTeiger } from "@/hooks/useTeiger";
-import { fetchTeigAtPoint, getAllTeigerInGrunnkretsAtPoint } from "@/utils/TeigUtils";
+import { getAllTeigerInGrunnkretsAtPoint, getMatrikkelenhetAtPoint } from "@/utils/TeigUtils";
 import type { TeigResponse } from "@/types/TeigResponse";
+import type { MatrikkelenhetResponse } from "@/types/Matrikkelenhet";
+import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
 
 const matrikkelenhetLayerStyle = new Style({
   fill: new Fill({ color: "rgba(26,131,59,0.2)" }),
@@ -27,7 +29,7 @@ export function MatrikkelenhetSelector({
   isActive: boolean;
   onToggle: (isActive: boolean) => void;
 }) {
-  const { teiger } = useTeiger();
+  const { matrikkelenheter } = useMatrikkelenheter();
   return (
     <>
       <Tooltip content={`Skru ${isActive ? "av" : "på"} henting av matrikkelenheter`}>
@@ -40,10 +42,10 @@ export function MatrikkelenhetSelector({
         </ToggleButton>
       </Tooltip>
       <VectorLayer style={matrikkelenhetLayerStyle}>
-        {isActive && <MapClickInteraction />}
-        {Array.from(teiger.values()).map((teig) => (
-          <Teig key={teig.properties.lokalid} geometry={teig.geometry} />
+        {Array.from(matrikkelenheter.values()).map((matrikkelenhet) => (
+          <Matrikkelenhet key={matrikkelenhet.id} enhet={matrikkelenhet} />
         ))}
+        {isActive && <MapClickInteraction />}
       </VectorLayer>
     </>
   );
@@ -74,34 +76,16 @@ function MapClickInteraction() {
     let active = true;
 
     async function handleMapClick(e: MapBrowserEvent) {
-      if (e.originalEvent?.shiftKey) {
-        const teigerFraGrunnkrets = await withWaitCursor(map, () =>
-          getAllTeigerInGrunnkretsAtPoint(e.coordinate),
-        );
-
-        for (const teig of teigerFraGrunnkrets) {
-          useTeiger.getState().addTeig(teig.properties.lokalid, teig);
-        }
-        return;
-      }
-
-      for (const [lokalid, teig] of useTeiger.getState().teiger) {
-        if (checkIfCoordinateIntersectsPolygon(e.coordinate, teig.geometry.coordinates)) {
-          useTeiger.getState().removeTeig(lokalid);
-          return;
-        }
-      }
-
-      let data: TeigResponse | undefined;
+      let res: MatrikkelenhetResponse | undefined;
       try {
-        data = await withWaitCursor(map, () => fetchTeigAtPoint(e.coordinate));
+        res = await withWaitCursor(map, () => getMatrikkelenhetAtPoint(e.coordinate));
       } catch (error) {
         console.error("Failed to retrieve matrikkelenhet", error);
         return;
       }
 
-      if (data && active) {
-        useTeiger.getState().addTeig(data.properties.lokalid, data);
+      if (res && active) {
+        useMatrikkelenheter.getState().addMatrikkelenhet(res.id, res);
       }
     }
 
@@ -113,6 +97,16 @@ function MapClickInteraction() {
   }, [map]);
 
   return null;
+}
+
+function Matrikkelenhet({ enhet }: { enhet: MatrikkelenhetResponse }) {
+  return (
+    <>
+      {enhet.features.map((teig) => (
+        <Teig key={teig.properties.lokalid} geometry={teig.geometry} />
+      ))}
+    </>
+  );
 }
 
 function Teig({ geometry }: { geometry: TeigResponse["geometry"] }) {
