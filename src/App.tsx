@@ -14,6 +14,9 @@ import { Link } from "@kv-designsystem/react";
 import { ErrorPage } from "./pages/ErrorPage";
 import { Home } from "./pages/Home";
 import { NotFound } from "./pages/NotFound";
+import { NewRegulering } from "./pages/NewRegulering";
+import { ReguleringDetail } from "./pages/ReguleringDetail";
+import { Reguleringer } from "./pages/Reguleringer";
 
 // Every page but the map: the nav, then the content in a width-capped <main>.
 function Layout({ children }: { children: ReactNode }) {
@@ -25,6 +28,9 @@ function Layout({ children }: { children: ReactNode }) {
         </Link>
         <Link asChild>
           <RouterLink to="/kart">Kart</RouterLink>
+        </Link>
+        <Link asChild>
+          <RouterLink to="/reguleringer">Reguleringer</RouterLink>
         </Link>
       </nav>
       {children}
@@ -63,7 +69,21 @@ function createAppRouter(history: RouterHistory) {
     ),
   });
   const routeTree = rootRoute.addChildren([
-    layout.addChildren([createRoute({ getParentRoute: () => layout, path: "/", component: Home })]),
+    layout.addChildren([
+      createRoute({ getParentRoute: () => layout, path: "/", component: Home }),
+      createRoute({ getParentRoute: () => layout, path: "/reguleringer", component: Reguleringer }),
+      createRoute({
+        getParentRoute: () => layout,
+        path: "/reguleringer/ny",
+        component: NewRegulering,
+      }),
+      createRoute({
+        getParentRoute: () => layout,
+        path: "/reguleringer/$reguleringId",
+        remountDeps: ({ params }) => params,
+        component: ReguleringDetail,
+      }),
+    ]),
     createRoute({
       getParentRoute: () => rootRoute,
       path: "/kart",

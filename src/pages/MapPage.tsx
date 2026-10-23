@@ -9,9 +9,11 @@ import { MapDrawing } from "@/components/Map/Drawing";
 import { MatrikkelenhetSelector } from "@/components/MatrikkelenhetSelector/MatrikkelenhetSelector";
 import { useState } from "react";
 import { MapLayerSelect } from "@/components/MapLayerSelect/MapLayerSelect";
+import { useTeiger } from "@/hooks/useTeiger";
 
 export function MapPage() {
   const [activeTool, setActiveTool] = useState<"drawing" | "parcel" | null>(null);
+  const selectedCount = useTeiger((state) => state.teiger.size);
   const norgeskartTileUrl =
     "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png";
 
@@ -36,12 +38,25 @@ export function MapPage() {
         </Toolbar>
       </OlMap>
       <div className="map-panel">
-        <Button asChild variant="primary" data-size="sm">
-          <RouterLink to="/">
-            <ArrowLeftIcon aria-hidden />
-            Forsiden
-          </RouterLink>
-        </Button>
+        <div className="map-actions">
+          {selectedCount ? (
+            <Button asChild variant="primary" data-size="sm">
+              <RouterLink to="/reguleringer/ny">
+                Opprett grensejustering ({selectedCount})
+              </RouterLink>
+            </Button>
+          ) : (
+            <Button variant="primary" data-size="sm" disabled>
+              Opprett grensejustering (0)
+            </Button>
+          )}
+          <Button asChild variant="secondary" data-size="sm">
+            <RouterLink to="/">
+              <ArrowLeftIcon aria-hidden />
+              Forsiden
+            </RouterLink>
+          </Button>
+        </div>
       </div>
     </div>
   );
