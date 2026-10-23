@@ -13,3 +13,9 @@ vp dev        # http://localhost:5173
 vp check      # formatering, lint og typesjekk
 vp test       # tester
 ```
+
+For å teste frontend med Caddy lokalt, kjør fra repoet:
+
+```sh
+./dev.sh    # http://localhost:8080
+```

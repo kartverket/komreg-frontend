@@ -3,6 +3,9 @@ apiVersion: "backstage.io/v1alpha1"
 kind: "Component"
 metadata:
   name: "komreg-frontend"
+  description: "Webklienten til KomReg. Velg teiger i kartet, bygg lister og send reguleringer."
+  annotations:
+    github.com/project-slug: "kartverket/komreg-frontend"
   tags:
     - "internal"
 spec:
@@ -10,3 +13,5 @@ spec:
   lifecycle: "experimental"
   owner: "smia"
   system: "komreg"
+  consumesApis:
+    - "api:default/komreg-regulerings-api"
