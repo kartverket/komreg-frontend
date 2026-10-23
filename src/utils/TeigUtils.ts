@@ -126,6 +126,11 @@ export async function getMatrikkelenhetAtPoint(
   const gardsnummer = teig.properties.gardsnummer;
   const bruksnummer = teig.properties.bruksnummer;
 
+  // Teiger without a matrikkelnummer ("Mnr mangler") can't be looked up, so they form their own enhet.
+  if (gardsnummer === null || bruksnummer === null) {
+    return { id: `teig/${teig.properties.lokalid}`, features: [teig] };
+  }
+
   const matrikkelenhet = await getAllTeigerForMatrikkelenhet(
     kommunnenummer,
     gardsnummer,

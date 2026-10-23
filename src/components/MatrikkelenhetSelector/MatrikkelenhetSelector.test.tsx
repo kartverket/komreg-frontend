@@ -155,6 +155,22 @@ describe("MatrikkelenhetSelector", () => {
     });
   });
 
+  it("draws a teig without matrikkelnummer on its own without looking up the matrikkelenhet", async () => {
+    const teigUtenMnr = buildTeigResponse(155883206);
+    teigUtenMnr.properties.gardsnummer = null;
+    teigUtenMnr.properties.bruksnummer = null;
+    teigUtenMnr.properties.matrikkelnummertekst = "Mnr mangler";
+    const mockedFetch = stubFetchWithTeiger([teigUtenMnr]);
+    const { map } = renderSelector(true);
+
+    click(map, INSIDE_TEIG);
+
+    await vi.waitFor(() => {
+      expect(getMatrikkelenhetIdsInMap(map)).toEqual(["teig/155883206"]);
+    });
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
+  });
+
   it("removes the whole matrikkelenhet from the map when one of its teiger is clicked", async () => {
     const mockedFetch = stubFetchWithTeiger([]);
     const teigElsewhere = buildTeigResponse(3);
