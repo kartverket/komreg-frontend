@@ -1,4 +1,4 @@
-FROM dhi.io/caddy:2.11.4-debian13@sha256:1b40b4f43bbfada63b22431ec6fec48b50e212abfc1cc5e645948483a656ddcc
+FROM ghcr.io/kartverket/caddy:2.11.7@sha256:9472b72d85b0e37b60dc7b314e25c37b627c7ad3ba9aa92c38c50e6a81a20a7b
 
 COPY dist /srv
 COPY build-config/caddy/Caddyfile /etc/caddy/Caddyfile
