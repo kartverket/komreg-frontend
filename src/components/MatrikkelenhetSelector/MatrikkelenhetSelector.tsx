@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { useMap } from "../Map/MapContext";
 import { Feature, type MapBrowserEvent } from "ol";
 import Fill from "ol/style/Fill";
-import Style from "ol/style/Style";
+import Style, { type StyleFunction } from "ol/style/Style";
 import Stroke from "ol/style/Stroke";
 import Polygon from "ol/geom/Polygon";
 import type VectorSource from "ol/source/Vector";
@@ -16,6 +16,10 @@ import { getMatrikkelenhetAtPoint } from "@/utils/TeigUtils";
 import type { TeigResponse } from "@/types/TeigResponse";
 import type { MatrikkelenhetResponse } from "@/types/Matrikkelenhet";
 import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
+import type { Address } from "@/types/Address";
+import Point from "ol/geom/Point";
+import CircleStyle from "ol/style/Circle";
+import Text from "ol/style/Text";
 
 const matrikkelenhetLayerStyle = new Style({
   fill: new Fill({ color: "rgba(26,131,59,0.2)" }),
@@ -110,6 +114,23 @@ function MapClickInteraction() {
 function Matrikkelenhet({ enhet }: { enhet: MatrikkelenhetResponse }) {
   return (
     <>
+      {enhet.addresses
+        ?.filter(
+          (address) =>
+            address.representasjonspunkt?.lon !== undefined &&
+            address.representasjonspunkt?.lat !== undefined,
+        )
+        .map((address) => (
+          <AddressComponent
+            key={
+              (address.kommunenummer ?? "") +
+              (address.adressekode ?? "") +
+              (address.nummer ?? "") +
+              (address.bokstav ?? "")
+            }
+            address={address}
+          />
+        ))}
       {enhet.features.map((teig) => (
         <Teig key={teig.properties.lokalid} geometry={teig.geometry} enhetId={enhet.id} />
       ))}
@@ -130,5 +151,38 @@ function Teig({ geometry, enhetId }: { geometry: TeigResponse["geometry"]; enhet
     };
   }, [geometry, enhetId, source]);
 
+  return null;
+}
+function AddressComponent({ address }: { address: Address }) {
+  const MAX_RESOLUTION_FOR_LABEL = 10;
+  const source = useVectorSource();
+  useEffect(() => {
+    const addressStyle: StyleFunction = (_feature, resolution) =>
+      new Style({
+        image: new CircleStyle({
+          radius: 6,
+          fill: new Fill({ color: "#fff" }),
+          stroke: new Stroke({ color: "#1A589F", width: 4 }),
+        }),
+        text:
+          resolution <= MAX_RESOLUTION_FOR_LABEL
+            ? new Text({
+                text: address.adressetekst,
+                fill: new Fill({ color: "#fff" }),
+                stroke: new Stroke({ color: "#2b2e33", width: 3 }),
+                font: "12px system-ui, sans-serif",
+                offsetY: -12,
+              })
+            : undefined,
+      });
+
+    const { lon, lat } = address.representasjonspunkt!;
+    const feature = new Feature(new Point([lon, lat]));
+    feature.setStyle(addressStyle);
+    source.addFeature(feature);
+    return () => {
+      source.removeFeature(feature);
+    };
+  }, [address, source]);
   return null;
 }
