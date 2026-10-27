@@ -5,15 +5,15 @@
   "type": "module",
   "dependencies": {
     "@kv-designsystem/react": "1.0.0-alpha.6",
-    "@navikt/aksel-icons": "8.19.2",
-    "@tanstack/react-router": "1.170.45",
+    "@navikt/aksel-icons": "8.20.0",
+    "@tanstack/react-router": "1.170.46",
     "ol": "10.11.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "zustand": "5.0.15"
+    "zustand": "5.0.16"
   },
   "devDependencies": {
-    "@babel/core": "8.0.7",
+    "@babel/core": "8.0.9",
     "@kv-designsystem/theme": "1.0.0-alpha.4",
     "@rolldown/plugin-babel": "0.2.4",
     "@testing-library/jest-dom": "7.0.1",
@@ -32,7 +32,7 @@
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": "12.14.0",
+      "version": "12.15.0",
       "onFail": "download"
     }
   }
