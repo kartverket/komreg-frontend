@@ -8,6 +8,7 @@
       "description": "Group non-major updates",
       "groupName": "non-major updates",
       "matchManagers": ["npm"],
+      "minimumReleaseAge": "24 hours",
       "matchUpdateTypes": ["minor", "patch"]
     },
     {
