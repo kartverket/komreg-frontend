@@ -37,6 +37,24 @@ main {
   right: var(--ds-size-3);
 }
 
+.form-error {
+  color: var(--ds-color-danger-text-default);
+}
+
+.regulering-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.regulering-table-row {
+  cursor: pointer;
+}
+
+.regulering-table-link,
+.regulering-table-link:visited {
+  color: var(--ds-color-neutral-text-default);
+}
+
 .map-title {
   position: absolute;
   width: 1px;
