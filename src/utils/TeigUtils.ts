@@ -7,6 +7,7 @@ import Polygon from "ol/geom/Polygon";
 import type { Coordinate } from "ol/coordinate";
 import { fetchGrunnkretsAtPoint } from "@/utils/GrunnkretsUtils";
 import type { MatrikkelenhetResponse } from "@/types/Matrikkelenhet";
+import type { Address } from "@/types/Address";
 
 export async function getAllTeigerInGrunnkretsAtPoint(
   coordinate: Coordinate,
@@ -131,14 +132,35 @@ export async function getMatrikkelenhetAtPoint(
     return { id: `teig/${teig.properties.lokalid}`, features: [teig] };
   }
 
-  const matrikkelenhet = await getAllTeigerForMatrikkelenhet(
-    kommunnenummer,
-    gardsnummer,
-    bruksnummer,
-  );
+  const [addresses, matrikkelenhet] = await Promise.all([
+    getAllAddressesForMatrikkelenhet(kommunnenummer, gardsnummer, bruksnummer),
+    getAllTeigerForMatrikkelenhet(kommunnenummer, gardsnummer, bruksnummer),
+  ]);
 
   if (!matrikkelenhet.features || matrikkelenhet.features.length === 0) return undefined;
-  return { id: kommunnenummer + "/" + gardsnummer + "/" + bruksnummer, ...matrikkelenhet };
+
+  return {
+    id: kommunnenummer + "/" + gardsnummer + "/" + bruksnummer,
+    addresses,
+    ...matrikkelenhet,
+  };
+}
+
+async function getAllAddressesForMatrikkelenhet(
+  kommunenummer: string,
+  gardsnummer: number,
+  bruksnummer: number,
+): Promise<Address[]> {
+  const url = `https://ws.geonorge.no/adresser/v1/sok?kommunenummer=${kommunenummer}&gardsnummer=${gardsnummer}&bruksnummer=${bruksnummer}&utkoordsys=3857&objtype=Vegadresse`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Kartverket API returned HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  if (!data.adresser) {
+    return [];
+  }
+  return data.adresser as Address[];
 }
 
 function getAllTeigerForMatrikkelenhet(
