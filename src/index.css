@@ -37,6 +37,22 @@ main {
   right: var(--ds-size-3);
 }
 
+.map-actions,
+.form-actions {
+  display: flex;
+  gap: var(--ds-size-2);
+}
+
+.map-actions {
+  align-items: center;
+}
+
+.regulering-form {
+  display: grid;
+  gap: var(--ds-size-4);
+  max-width: 36rem;
+}
+
 .form-error {
   color: var(--ds-color-danger-text-default);
 }
