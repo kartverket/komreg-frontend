@@ -99,6 +99,18 @@ describe("App", () => {
     expect(screen.getByRole("row", { name: "1 1 1" })).toBeVisible();
   });
 
+  it("moves a whole gårdsnummer when chosen", async () => {
+    selectMatrikkelenhet();
+    renderAt("/reguleringer/ny");
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "Flytt hele gårdsnummer 0301-1" }),
+    );
+    await fillInAndSubmit();
+
+    expect(await screen.findByRole("cell", { name: "Hele gårdsnummeret" })).toBeVisible();
+  });
+
   it("shows saved regulations in a table", async () => {
     await createRegulering({
       navn: "Lagret regulering",

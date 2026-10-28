@@ -1,8 +1,8 @@
 export type MatrikkelenhetDraft = {
   kommunenummer: string;
   gardsnummer: number;
-  bruksnummer: number;
-  // The teiger selected in the map.
+  // null på bruksnummer flytter hele gårdsnummeret.
+  bruksnummer: number | null;
   teigIder: number[];
 };
 
@@ -56,8 +56,37 @@ export function lagMatrikkelenhetDraft(enhet: ValgtMatrikkelenhet): Matrikkelenh
   };
 }
 
+export function gardsnummerNokkel({ kommunenummer, gardsnummer }: MatrikkelenhetDraft): string {
+  return `${kommunenummer}-${gardsnummer}`;
+}
+
+export function medHeleGardsnummer(
+  matrikkelenheter: MatrikkelenhetDraft[],
+  heleGardsnummer: ReadonlySet<string>,
+): MatrikkelenhetDraft[] {
+  const result: MatrikkelenhetDraft[] = [];
+  const gardene = new Map<string, MatrikkelenhetDraft>();
+  for (const enhet of matrikkelenheter) {
+    const nokkel = gardsnummerNokkel(enhet);
+    if (!heleGardsnummer.has(nokkel)) {
+      result.push(enhet);
+      continue;
+    }
+    const gard = gardene.get(nokkel);
+    if (gard) {
+      gard.teigIder.push(...enhet.teigIder);
+    } else {
+      const helGard = { ...enhet, bruksnummer: null, teigIder: [...enhet.teigIder] };
+      gardene.set(nokkel, helGard);
+      result.push(helGard);
+    }
+  }
+  return result;
+}
+
 export function formatMatrikkelnummer(matrikkelenhet: MatrikkelenhetDraft): string {
   const { kommunenummer, gardsnummer, bruksnummer } = matrikkelenhet;
+  if (bruksnummer === null) return `${kommunenummer}-${gardsnummer} (hele gårdsnummeret)`;
   return `${kommunenummer}-${gardsnummer}/${bruksnummer}`;
 }
 

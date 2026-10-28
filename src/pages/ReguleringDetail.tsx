@@ -64,7 +64,7 @@ export function ReguleringDetail() {
                 {regulering.grensejustering.matrikkelenheter.map((item) => (
                   <Table.Row key={formatMatrikkelnummer(item)}>
                     <Table.Cell>{item.gardsnummer}</Table.Cell>
-                    <Table.Cell>{item.bruksnummer}</Table.Cell>
+                    <Table.Cell>{item.bruksnummer ?? "Hele gårdsnummeret"}</Table.Cell>
                     <Table.Cell>{item.teigIder.length}</Table.Cell>
                   </Table.Row>
                 ))}
