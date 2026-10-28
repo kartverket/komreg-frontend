@@ -13,8 +13,6 @@ const request: OpprettReguleringRequest = {
         kommunenummer: "1525",
         gardsnummer: 12,
         bruksnummer: 4,
-        festenummer: 0,
-        seksjonsnummer: 0,
         teigIder: [10, 11],
       },
     ],
@@ -48,7 +46,6 @@ describe("midlertidig reguleringslager", () => {
         dato: request.dato,
         fraKommunenummer: "1525",
         tilKommunenummer: "1508",
-        antallMatrikkelenheter: 1,
       },
     ]);
   });

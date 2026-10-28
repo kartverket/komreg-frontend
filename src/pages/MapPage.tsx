@@ -9,11 +9,11 @@ import { MapDrawing } from "@/components/Map/Drawing";
 import { MatrikkelenhetSelector } from "@/components/MatrikkelenhetSelector/MatrikkelenhetSelector";
 import { useState } from "react";
 import { MapLayerSelect } from "@/components/MapLayerSelect/MapLayerSelect";
-import { useTeiger } from "@/hooks/useTeiger";
+import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
 
 export function MapPage() {
   const [activeTool, setActiveTool] = useState<"drawing" | "parcel" | null>(null);
-  const selectedCount = useTeiger((state) => state.teiger.size);
+  const selectedCount = useMatrikkelenheter((state) => state.matrikkelenheter.size);
   const norgeskartTileUrl =
     "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png";
 

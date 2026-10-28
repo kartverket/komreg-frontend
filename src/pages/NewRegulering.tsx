@@ -1,29 +1,47 @@
 import { useState } from "react";
-import { Button, Heading, Paragraph, Textfield } from "@kv-designsystem/react";
+import { Button, Checkbox, Heading, Paragraph, Textfield } from "@kv-designsystem/react";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { createRegulering } from "@/api/reguleringer";
 import {
   formatMatrikkelnummer,
-  lagMatrikkelenheterFraTeiger,
+  gardsnummerNokkel,
+  lagMatrikkelenhetDraft,
+  medHeleGardsnummer,
   validerGrensejustering,
   type GrensejusteringDraft,
 } from "@/domain/regulering";
-import { useTeiger } from "@/hooks/useTeiger";
+import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
 
 export function NewRegulering() {
   const navigate = useNavigate();
-  const teiger = useTeiger((state) => state.teiger);
-  const clearTeiger = useTeiger((state) => state.clearTeiger);
-  const matrikkelenheter = lagMatrikkelenheterFraTeiger(teiger.values());
+  const valgte = useMatrikkelenheter((state) => state.matrikkelenheter);
+  const clearMatrikkelenheter = useMatrikkelenheter((state) => state.clearMatrikkelenheter);
+  const drafts = Array.from(valgte.values(), lagMatrikkelenhetDraft);
+  const utenMatrikkelnummer = drafts.filter((draft) => draft === null).length;
+  const valgteEnheter = drafts.filter((draft) => draft !== null);
+  const gardsnumre = [...new Set(valgteEnheter.map(gardsnummerNokkel))];
+  const [heleGardsnummer, setHeleGardsnummer] = useState<ReadonlySet<string>>(new Set());
+  const matrikkelenheter = medHeleGardsnummer(valgteEnheter, heleGardsnummer);
   const [navn, setNavn] = useState("");
   const [dato, setDato] = useState("");
-  const [fraKommune, setFraKommune] = useState(matrikkelenheter[0]?.kommunenummer ?? "");
+  const [fraKommune, setFraKommune] = useState(valgteEnheter[0]?.kommunenummer ?? "");
   const [tilKommune, setTilKommune] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  function toggleHeleGardsnummer(nokkel: string, checked: boolean) {
+    const neste = new Set(heleGardsnummer);
+    if (checked) neste.add(nokkel);
+    else neste.delete(nokkel);
+    setHeleGardsnummer(neste);
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (utenMatrikkelnummer) {
+      setError("Teiger uten matrikkelnummer kan ikke flyttes ennå. Fjern dem i kartet.");
+      return;
+    }
     const grensejustering: GrensejusteringDraft = {
       fraKommunenummer: fraKommune.trim(),
       tilKommunenummer: tilKommune.trim(),
@@ -39,7 +57,7 @@ export function NewRegulering() {
     setSaving(true);
     try {
       const id = await createRegulering({ navn, dato, grensejustering });
-      clearTeiger();
+      clearMatrikkelenheter();
       await navigate({ to: "/reguleringer/$reguleringId", params: { reguleringId: String(id) } });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Kunne ikke opprette reguleringen");
@@ -52,7 +70,7 @@ export function NewRegulering() {
       <Heading level={1} data-size="lg">
         Opprett grensejustering
       </Heading>
-      {!matrikkelenheter.length ? (
+      {!valgte.size ? (
         <Paragraph>Ingen matrikkelenheter er valgt. Velg dem i kartet først.</Paragraph>
       ) : (
         <form className="regulering-form" onSubmit={(event) => void submit(event)}>
@@ -87,11 +105,22 @@ export function NewRegulering() {
             <Heading level={2} data-size="xs">
               Matrikkelenheter ({matrikkelenheter.length})
             </Heading>
+            {gardsnumre.map((nokkel) => (
+              <Checkbox
+                key={nokkel}
+                label={`Flytt hele gårdsnummer ${nokkel}`}
+                checked={heleGardsnummer.has(nokkel)}
+                onChange={(event) => toggleHeleGardsnummer(nokkel, event.target.checked)}
+              />
+            ))}
             <ul>
               {matrikkelenheter.map((item) => (
                 <li key={formatMatrikkelnummer(item)}>{formatMatrikkelnummer(item)}</li>
               ))}
             </ul>
+            {utenMatrikkelnummer > 0 && (
+              <Paragraph>{utenMatrikkelnummer} teig(er) uten matrikkelnummer er valgt.</Paragraph>
+            )}
           </section>
           {error && (
             <Paragraph className="form-error" role="alert">

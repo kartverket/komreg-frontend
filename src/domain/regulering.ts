@@ -1,9 +1,9 @@
 export type MatrikkelenhetDraft = {
   kommunenummer: string;
   gardsnummer: number;
-  bruksnummer: number;
-  festenummer: number;
-  seksjonsnummer: number;
+  // null: the whole gårdsnummer moves, with every bruksnummer under it.
+  bruksnummer: number | null;
+  // The teiger selected in the map, also for a whole gårdsnummer.
   teigIder: number[];
 };
 
@@ -25,7 +25,6 @@ export type ReguleringSummary = {
   dato: string;
   fraKommunenummer: string;
   tilKommunenummer: string;
-  antallMatrikkelenheter: number;
 };
 
 export type ReguleringDetail = {
@@ -35,56 +34,62 @@ export type ReguleringDetail = {
   grensejustering: GrensejusteringDraft;
 };
 
-export type TeigForRegulering = {
-  properties: {
-    kommunenummer: string;
-    gardsnummer: number;
-    bruksnummer: number;
-    festenummer: number;
-    seksjonsnummer: number | null;
-    lokalid: number;
-  };
+export type ValgtMatrikkelenhet = {
+  features: {
+    properties: {
+      kommunenummer: string;
+      gardsnummer: number | null;
+      bruksnummer: number | null;
+      lokalid: number;
+    };
+  }[];
 };
 
-export function lagMatrikkelenheterFraTeiger(
-  teiger: Iterable<TeigForRegulering>,
+// Teiger uten matrikkelnummer returnerer null
+export function lagMatrikkelenhetDraft(enhet: ValgtMatrikkelenhet): MatrikkelenhetDraft | null {
+  const first = enhet.features[0]?.properties;
+  if (!first || first.gardsnummer === null || first.bruksnummer === null) return null;
+  return {
+    kommunenummer: first.kommunenummer,
+    gardsnummer: first.gardsnummer,
+    bruksnummer: first.bruksnummer,
+    teigIder: enhet.features.map((teig) => teig.properties.lokalid),
+  };
+}
+
+export function gardsnummerNokkel({ kommunenummer, gardsnummer }: MatrikkelenhetDraft): string {
+  return `${kommunenummer}-${gardsnummer}`;
+}
+
+// Erstatter bruksnummer under hvert gårdsnummer i heleGardsnummer med en endring for hele gårdsnummeret.
+export function medHeleGardsnummer(
+  matrikkelenheter: MatrikkelenhetDraft[],
+  heleGardsnummer: ReadonlySet<string>,
 ): MatrikkelenhetDraft[] {
-  const grouped = new Map<string, MatrikkelenhetDraft>();
-  for (const teig of teiger) {
-    const properties = teig.properties;
-    // Teiger without a seksjon come with null; the matrikkel uses 0.
-    const seksjonsnummer = properties.seksjonsnummer ?? 0;
-    const key = [
-      properties.kommunenummer,
-      properties.gardsnummer,
-      properties.bruksnummer,
-      properties.festenummer,
-      seksjonsnummer,
-    ].join("/");
-    const existing = grouped.get(key);
-    if (existing) {
-      if (!existing.teigIder.includes(properties.lokalid)) {
-        existing.teigIder.push(properties.lokalid);
-      }
+  const result: MatrikkelenhetDraft[] = [];
+  const gardene = new Map<string, MatrikkelenhetDraft>();
+  for (const enhet of matrikkelenheter) {
+    const nokkel = gardsnummerNokkel(enhet);
+    if (!heleGardsnummer.has(nokkel)) {
+      result.push(enhet);
+      continue;
+    }
+    const gard = gardene.get(nokkel);
+    if (gard) {
+      gard.teigIder.push(...enhet.teigIder);
     } else {
-      grouped.set(key, {
-        kommunenummer: properties.kommunenummer,
-        gardsnummer: properties.gardsnummer,
-        bruksnummer: properties.bruksnummer,
-        festenummer: properties.festenummer,
-        seksjonsnummer,
-        teigIder: [properties.lokalid],
-      });
+      const helGard = { ...enhet, bruksnummer: null, teigIder: [...enhet.teigIder] };
+      gardene.set(nokkel, helGard);
+      result.push(helGard);
     }
   }
-  return Array.from(grouped.values());
+  return result;
 }
 
 export function formatMatrikkelnummer(matrikkelenhet: MatrikkelenhetDraft): string {
-  const { kommunenummer, gardsnummer, bruksnummer, festenummer, seksjonsnummer } = matrikkelenhet;
-  const nummer = [gardsnummer, bruksnummer, festenummer, seksjonsnummer];
-  while (nummer.length > 2 && nummer.at(-1) === 0) nummer.pop();
-  return `${kommunenummer}-${nummer.join("/")}`;
+  const { kommunenummer, gardsnummer, bruksnummer } = matrikkelenhet;
+  if (bruksnummer === null) return `${kommunenummer}-${gardsnummer} (hele gårdsnummeret)`;
+  return `${kommunenummer}-${gardsnummer}/${bruksnummer}`;
 }
 
 const KOMMUNENUMMER = /^\d{4}$/;

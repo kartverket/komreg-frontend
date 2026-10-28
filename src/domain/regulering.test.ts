@@ -1,62 +1,60 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   formatMatrikkelnummer,
-  lagMatrikkelenheterFraTeiger,
+  lagMatrikkelenhetDraft,
+  medHeleGardsnummer,
   validerGrensejustering,
   type MatrikkelenhetDraft,
-  type TeigForRegulering,
 } from "./regulering";
 
-function teig(lokalid: number, bruksnummer: number): TeigForRegulering {
-  return {
-    properties: {
-      lokalid,
-      kommunenummer: "1525",
-      gardsnummer: 12,
-      bruksnummer,
-      festenummer: 0,
-      seksjonsnummer: 0,
-    },
-  };
+function teig(lokalid: number, bruksnummer: number | null) {
+  return { properties: { lokalid, kommunenummer: "0301", gardsnummer: 1, bruksnummer } };
 }
-
-describe("lagMatrikkelenheterFraTeiger", () => {
-  it("samler flere teiger for samme matrikkelenhet", () => {
-    const result = lagMatrikkelenheterFraTeiger([teig(10, 4), teig(11, 4), teig(12, 5)]);
-
-    expect(result).toMatchObject([{ teigIder: [10, 11] }, { teigIder: [12] }]);
-  });
-
-  it("tar ikke med samme teig flere ganger", () => {
-    const result = lagMatrikkelenheterFraTeiger([teig(10, 4), teig(10, 4)]);
-
-    expect(result).toMatchObject([{ teigIder: [10] }]);
-  });
-
-  it("bruker 0 når seksjonsnummer mangler", () => {
-    const utenSeksjon = teig(10, 4);
-    utenSeksjon.properties.seksjonsnummer = null;
-
-    const result = lagMatrikkelenheterFraTeiger([utenSeksjon, teig(11, 4)]);
-
-    expect(result).toMatchObject([{ seksjonsnummer: 0, teigIder: [10, 11] }]);
-  });
-});
 
 const enhet: MatrikkelenhetDraft = {
   kommunenummer: "0301",
   gardsnummer: 1,
   bruksnummer: 2,
-  festenummer: 0,
-  seksjonsnummer: 0,
   teigIder: [1],
 };
 
+describe("lagMatrikkelenhetDraft", () => {
+  it("tar med alle teigene i matrikkelenheten", () => {
+    expect(lagMatrikkelenhetDraft({ features: [teig(10, 2), teig(11, 2)] })).toEqual({
+      kommunenummer: "0301",
+      gardsnummer: 1,
+      bruksnummer: 2,
+      teigIder: [10, 11],
+    });
+  });
+
+  it("gir null for teiger uten matrikkelnummer", () => {
+    expect(lagMatrikkelenhetDraft({ features: [teig(10, null)] })).toBeNull();
+  });
+});
+
+describe("medHeleGardsnummer", () => {
+  const bnr3 = { ...enhet, bruksnummer: 3, teigIder: [2] };
+  const annenGard = { ...enhet, gardsnummer: 5, teigIder: [3] };
+
+  it("slår sammen bruksnumrene i valgte gårdsnumre", () => {
+    expect(medHeleGardsnummer([enhet, bnr3, annenGard], new Set(["0301-1"]))).toEqual([
+      { ...enhet, bruksnummer: null, teigIder: [1, 2] },
+      annenGard,
+    ]);
+  });
+
+  it("lar resten være uendret", () => {
+    expect(medHeleGardsnummer([enhet, bnr3], new Set())).toEqual([enhet, bnr3]);
+  });
+});
+
 describe("formatMatrikkelnummer", () => {
-  it("utelater feste- og seksjonsnummer som er 0 på slutten", () => {
+  it("viser gårdsnummer med og uten bruksnummer", () => {
     expect(formatMatrikkelnummer(enhet)).toBe("0301-1/2");
-    expect(formatMatrikkelnummer({ ...enhet, festenummer: 3 })).toBe("0301-1/2/3");
-    expect(formatMatrikkelnummer({ ...enhet, seksjonsnummer: 4 })).toBe("0301-1/2/0/4");
+    expect(formatMatrikkelnummer({ ...enhet, bruksnummer: null })).toBe(
+      "0301-1 (hele gårdsnummeret)",
+    );
   });
 });
 

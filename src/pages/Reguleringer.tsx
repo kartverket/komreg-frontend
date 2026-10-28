@@ -47,7 +47,6 @@ export function Reguleringer() {
                 <Table.HeaderCell>Navn</Table.HeaderCell>
                 <Table.HeaderCell>Fra kommune</Table.HeaderCell>
                 <Table.HeaderCell>Til kommune</Table.HeaderCell>
-                <Table.HeaderCell>Matrikkelenheter</Table.HeaderCell>
                 <Table.HeaderCell>Ikrafttredelse</Table.HeaderCell>
               </Table.Row>
             </Table.Head>
@@ -78,7 +77,6 @@ export function Reguleringer() {
                   </Table.Cell>
                   <Table.Cell>{item.fraKommunenummer}</Table.Cell>
                   <Table.Cell>{item.tilKommunenummer}</Table.Cell>
-                  <Table.Cell>{item.antallMatrikkelenheter}</Table.Cell>
                   <Table.Cell>{item.dato}</Table.Cell>
                 </Table.Row>
               ))}

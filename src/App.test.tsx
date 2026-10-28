@@ -4,7 +4,7 @@ import { createMemoryHistory } from "@tanstack/react-router";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { TeigResponse } from "./types/TeigResponse";
 import { createRegulering, REGULERINGER_STORAGE_KEY } from "./api/reguleringer";
-import { useTeiger } from "./hooks/useTeiger";
+import { useMatrikkelenheter } from "./hooks/useMatrikkelenheter";
 import { App } from "./App";
 
 function renderAt(path: string) {
@@ -32,9 +32,22 @@ const selectedTeig: TeigResponse = {
   },
 };
 
+function selectMatrikkelenhet() {
+  useMatrikkelenheter
+    .getState()
+    .addMatrikkelenhet("0301/1/1", { id: "0301/1/1", features: [selectedTeig] });
+}
+
+async function fillInAndSubmit() {
+  await userEvent.type(await screen.findByRole("textbox", { name: "Navn" }), "Ny regulering");
+  await userEvent.type(screen.getByLabelText("Ikrafttredelsesdato"), "2026-10-21");
+  await userEvent.type(screen.getByRole("textbox", { name: "Til kommune" }), "0302");
+  await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
+}
+
 describe("App", () => {
   beforeEach(() => {
-    useTeiger.getState().clearTeiger();
+    useMatrikkelenheter.getState().clearMatrikkelenheter();
     localStorage.removeItem(REGULERINGER_STORAGE_KEY);
   });
 
@@ -76,16 +89,26 @@ describe("App", () => {
   });
 
   it("opens the regulation details after creating a regulation", async () => {
-    useTeiger.getState().addTeig(selectedTeig.properties.lokalid, selectedTeig);
+    selectMatrikkelenhet();
     renderAt("/reguleringer/ny");
 
-    await userEvent.type(await screen.findByRole("textbox", { name: "Navn" }), "Ny regulering");
-    await userEvent.type(screen.getByLabelText("Ikrafttredelsesdato"), "2026-10-21");
-    await userEvent.type(screen.getByRole("textbox", { name: "Til kommune" }), "0302");
-    await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
+    await fillInAndSubmit();
 
     expect(await screen.findByRole("heading", { level: 1, name: "Ny regulering" })).toBeVisible();
     expect(screen.getByText("0301 → 0302")).toBeVisible();
+    expect(screen.getByText("0301-1/1")).toBeVisible();
+  });
+
+  it("moves a whole gårdsnummer when chosen", async () => {
+    selectMatrikkelenhet();
+    renderAt("/reguleringer/ny");
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "Flytt hele gårdsnummer 0301-1" }),
+    );
+    await fillInAndSubmit();
+
+    expect(await screen.findByText("0301-1 (hele gårdsnummeret)")).toBeVisible();
   });
 
   it("shows saved regulations in a table", async () => {
@@ -112,19 +135,16 @@ describe("App", () => {
   });
 
   it("keeps selected parcels when creation fails", async () => {
-    useTeiger.getState().addTeig(selectedTeig.properties.lokalid, selectedTeig);
+    selectMatrikkelenhet();
     vi.spyOn(Storage.prototype, "setItem").mockImplementationOnce(() => {
       throw new Error("Lagring feilet");
     });
     renderAt("/reguleringer/ny");
 
-    await userEvent.type(await screen.findByRole("textbox", { name: "Navn" }), "Ny regulering");
-    await userEvent.type(screen.getByLabelText("Ikrafttredelsesdato"), "2026-10-21");
-    await userEvent.type(screen.getByRole("textbox", { name: "Til kommune" }), "0302");
-    await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
+    await fillInAndSubmit();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("kunne ikke lagres lokalt");
-    expect(useTeiger.getState().teiger.has(selectedTeig.properties.lokalid)).toBe(true);
+    expect(useMatrikkelenheter.getState().matrikkelenheter.has("0301/1/1")).toBe(true);
   });
 
   it("shows our error page, with the nav, when a page throws", async () => {

@@ -7,7 +7,7 @@ import type {
 export const REGULERINGER_STORAGE_KEY = "komreg:reguleringer:v1";
 
 // TODO: Dette må byttes ut når regulerings apiet er klart.
-// Viba opp en localstorage "mock" inntil videre, 
+// Viba opp en localstorage "mock" inntil videre,
 // skal bare være å bytte ut dette direkte uten å måtte røre noe annet
 
 function read(): ReguleringDetail[] {
@@ -20,9 +20,7 @@ function read(): ReguleringDetail[] {
   }
 }
 
-export async function createRegulering(
-  request: OpprettReguleringRequest,
-): Promise<number> {
+export async function createRegulering(request: OpprettReguleringRequest): Promise<number> {
   const reguleringer = read();
   const id = Math.max(0, ...reguleringer.map((item) => item.id)) + 1;
 
@@ -48,7 +46,6 @@ export async function listReguleringer(): Promise<ReguleringSummary[]> {
         dato,
         fraKommunenummer: grensejustering.fraKommunenummer,
         tilKommunenummer: grensejustering.tilKommunenummer,
-        antallMatrikkelenheter: grensejustering.matrikkelenheter.length,
       }),
     );
   } catch {
