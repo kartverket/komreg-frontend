@@ -96,7 +96,7 @@ describe("App", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Ny regulering" })).toBeVisible();
     expect(screen.getByText("0301 → 0302")).toBeVisible();
-    expect(screen.getByText("0301-1/1")).toBeVisible();
+    expect(screen.getByRole("row", { name: "1 1 1" })).toBeVisible();
   });
 
   it("moves a whole gårdsnummer when chosen", async () => {
@@ -108,7 +108,7 @@ describe("App", () => {
     );
     await fillInAndSubmit();
 
-    expect(await screen.findByText("0301-1 (hele gårdsnummeret)")).toBeVisible();
+    expect(await screen.findByRole("cell", { name: "Hele gårdsnummeret" })).toBeVisible();
   });
 
   it("shows saved regulations in a table", async () => {
@@ -132,6 +132,9 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "Lagret regulering" }),
     ).toBeVisible();
+
+    await userEvent.click(screen.getByRole("link", { name: "Tilbake til reguleringer" }));
+    expect(await screen.findByRole("table")).toBeVisible();
   });
 
   it("keeps selected parcels when creation fails", async () => {

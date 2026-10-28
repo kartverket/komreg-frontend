@@ -56,7 +56,6 @@ export function Reguleringer() {
                   className="regulering-table-row"
                   key={item.id}
                   onClick={(event) => {
-                    // The name link navigates by itself.
                     if (event.target instanceof Element && event.target.closest("a")) return;
                     void navigate({
                       to: "/reguleringer/$reguleringId",

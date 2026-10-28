@@ -1,0 +1,4 @@
+/* Keeps the button its own width at the start of the page's flex column. */
+.backButton {
+  align-self: flex-start;
+}
