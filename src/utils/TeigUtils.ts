@@ -1,13 +1,15 @@
 import { type Geometry } from "ol/geom";
 import type { TeigResponse } from "@/types/TeigResponse";
 import WFS from "ol/format/WFS";
-import { within } from "ol/format/filter";
+import { and, equalTo, within } from "ol/format/filter";
+import type Filter from "ol/format/filter/Filter";
 import type { Feature } from "ol";
 import Polygon from "ol/geom/Polygon";
 import type { Coordinate } from "ol/coordinate";
 import { fetchGrunnkretsAtPoint } from "@/utils/GrunnkretsUtils";
 import type { MatrikkelenhetResponse } from "@/types/Matrikkelenhet";
 import type { Address } from "@/types/Address";
+import type { Matrikkelnummer } from "@/domain/regulering";
 
 export async function getAllTeigerInGrunnkretsAtPoint(
   coordinate: Coordinate,
@@ -30,6 +32,11 @@ export async function getAllTeigerInGrunnkretsAtPoint(
 }
 
 export async function fetchTeigerInGeometry(geometry: Geometry): Promise<TeigResponse[]> {
+  const features = await fetchTeigFeatures(within("representasjonspunkt", geometry, "EPSG:3857"));
+  return features.map(teigFeatureToTeigResponse).filter((teig) => teig !== undefined);
+}
+
+async function fetchTeigFeatures(filter: Filter, count?: number): Promise<Feature[]> {
   const wfsFormat = new WFS({ version: "2.0.0" });
   const node = wfsFormat.writeGetFeature({
     srsName: "EPSG:3857",
@@ -37,7 +44,8 @@ export async function fetchTeigerInGeometry(geometry: Geometry): Promise<TeigRes
     featureTypes: ["Teig"],
     featureNS:
       "http://skjema.geonorge.no/SOSI/produktspesifikasjon/Matrikkelen-Eiendomskart-Teig/20211101",
-    filter: within("representasjonspunkt", geometry, "EPSG:3857"),
+    filter,
+    count,
   });
 
   const res = await fetch("https://wfs.geonorge.no/skwms1/wfs.matrikkelen-eiendomskart-teig", {
@@ -54,8 +62,60 @@ export async function fetchTeigerInGeometry(geometry: Geometry): Promise<TeigRes
   if (!text) {
     throw new Error("WFS response is empty");
   }
-  const features = wfsFormat.readFeatures(text);
-  return features.map(teigFeatureToTeigResponse).filter((teig) => teig !== undefined);
+  return wfsFormat.readFeatures(text);
+}
+
+// Eiendoms-API-et (og Teig-WFS-en) kjenner bare matrikkelenheter som har teig. Et nummer som
+// ikke finnes her er derfor ikke et bevis på at det er ledig, men et som finnes er opptatt.
+async function bruksnummerFinnes(
+  kommunenummer: string,
+  gardsnummer: number,
+  bruksnummer: number,
+): Promise<boolean> {
+  const url = `https://api.kartverket.no/eiendom/v1/geokoding?kommunenummer=${kommunenummer}&gardsnummer=${gardsnummer}&bruksnummer=${bruksnummer}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Kartverket API returned HTTP ${res.status}`);
+  }
+  const data = (await res.json()) as { features?: unknown[] };
+  return (data.features?.length ?? 0) > 0;
+}
+
+// Geokodingen krever bruksnummer, så et helt gårdsnummer slås opp i Teig-WFS-en. Én teig
+// holder for å vite at gårdsnummeret er i bruk.
+async function gardsnummerFinnes(kommunenummer: string, gardsnummer: number): Promise<boolean> {
+  const sti = "app:matrikkelenhet/app:Matrikkelenhet";
+  const filter = and(
+    equalTo(`${sti}/app:kommunenummer`, kommunenummer),
+    equalTo(`${sti}/app:gardsnummer`, gardsnummer),
+  );
+  return (await fetchTeigFeatures(filter, 1)).length > 0;
+}
+
+export function matrikkelnummerFinnes(
+  kommunenummer: string,
+  { gardsnummer, bruksnummer }: Matrikkelnummer,
+): Promise<boolean> {
+  return bruksnummer === null
+    ? gardsnummerFinnes(kommunenummer, gardsnummer)
+    : bruksnummerFinnes(kommunenummer, gardsnummer, bruksnummer);
+}
+
+const SAMTIDIGE_OPPSLAG = 6;
+
+export async function finnEksisterendeMatrikkelnumre(
+  kommunenummer: string,
+  matrikkelnumre: Matrikkelnummer[],
+): Promise<Matrikkelnummer[]> {
+  const eksisterende: Matrikkelnummer[] = [];
+  for (let i = 0; i < matrikkelnumre.length; i += SAMTIDIGE_OPPSLAG) {
+    const bolk = matrikkelnumre.slice(i, i + SAMTIDIGE_OPPSLAG);
+    const finnes = await Promise.all(
+      bolk.map((nummer) => matrikkelnummerFinnes(kommunenummer, nummer)),
+    );
+    eksisterende.push(...bolk.filter((_, index) => finnes[index]));
+  }
+  return eksisterende;
 }
 
 function parseBoolean(value: unknown): boolean {

@@ -3,7 +3,11 @@ import { Heading, Paragraph, Table } from "@kv-designsystem/react";
 import { useParams } from "@tanstack/react-router";
 import { getRegulering } from "@/api/reguleringer";
 import { BackButton } from "@/components/BackButton/BackButton";
-import { formatMatrikkelnummer, type ReguleringDetail as Detail } from "@/domain/regulering";
+import {
+  formatMatrikkelnummer,
+  formatNyttMatrikkelnummer,
+  type ReguleringDetail as Detail,
+} from "@/domain/regulering";
 
 export function ReguleringDetail() {
   const { reguleringId } = useParams({ strict: false });
@@ -58,6 +62,7 @@ export function ReguleringDetail() {
                   <Table.HeaderCell>Gårdsnummer</Table.HeaderCell>
                   <Table.HeaderCell>Bruksnummer</Table.HeaderCell>
                   <Table.HeaderCell>Teiger</Table.HeaderCell>
+                  <Table.HeaderCell>Nytt matrikkelnummer</Table.HeaderCell>
                 </Table.Row>
               </Table.Head>
               <Table.Body>
@@ -66,6 +71,7 @@ export function ReguleringDetail() {
                     <Table.Cell>{item.gardsnummer}</Table.Cell>
                     <Table.Cell>{item.bruksnummer ?? "Hele gårdsnummeret"}</Table.Cell>
                     <Table.Cell>{item.teigIder.length}</Table.Cell>
+                    <Table.Cell>{formatNyttMatrikkelnummer(item)}</Table.Cell>
                   </Table.Row>
                 ))}
               </Table.Body>

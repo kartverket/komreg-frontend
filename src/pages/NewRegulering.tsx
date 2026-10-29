@@ -1,16 +1,29 @@
 import { useState } from "react";
-import { Button, Checkbox, Heading, Paragraph, Textfield } from "@kv-designsystem/react";
+import {
+  Button,
+  Checkbox,
+  Heading,
+  Input,
+  Paragraph,
+  Table,
+  Textfield,
+} from "@kv-designsystem/react";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { createRegulering } from "@/api/reguleringer";
 import {
+  finnOpptattMatrikkelnummer,
   formatMatrikkelnummer,
   gardsnummerNokkel,
   lagMatrikkelenhetDraft,
+  matrikkelnumreITilKommune,
   medHeleGardsnummer,
+  medNyeMatrikkelnumre,
   validerGrensejustering,
   type GrensejusteringDraft,
+  type NyttMatrikkelnummerInput,
 } from "@/domain/regulering";
 import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
+import { finnEksisterendeMatrikkelnumre } from "@/utils/TeigUtils";
 
 export function NewRegulering() {
   const navigate = useNavigate();
@@ -21,7 +34,13 @@ export function NewRegulering() {
   const valgteEnheter = drafts.filter((draft) => draft !== null);
   const gardsnumre = [...new Set(valgteEnheter.map(gardsnummerNokkel))];
   const [heleGardsnummer, setHeleGardsnummer] = useState<ReadonlySet<string>>(new Set());
-  const matrikkelenheter = medHeleGardsnummer(valgteEnheter, heleGardsnummer);
+  const [nyeNumre, setNyeNumre] = useState<ReadonlyMap<string, NyttMatrikkelnummerInput>>(
+    new Map(),
+  );
+  const matrikkelenheter = medNyeMatrikkelnumre(
+    medHeleGardsnummer(valgteEnheter, heleGardsnummer),
+    nyeNumre,
+  );
   const [navn, setNavn] = useState("");
   const [dato, setDato] = useState("");
   const [fraKommune, setFraKommune] = useState(valgteEnheter[0]?.kommunenummer ?? "");
@@ -34,6 +53,19 @@ export function NewRegulering() {
     if (checked) neste.add(nokkel);
     else neste.delete(nokkel);
     setHeleGardsnummer(neste);
+  }
+
+  function endreNyttNummer(nokkel: string, felt: keyof NyttMatrikkelnummerInput, verdi: string) {
+    setNyeNumre((forrige) => {
+      const neste = new Map(forrige);
+      neste.set(nokkel, {
+        gardsnummer: "",
+        bruksnummer: "",
+        ...forrige.get(nokkel),
+        [felt]: verdi,
+      });
+      return neste;
+    });
   }
 
   async function submit(event: React.FormEvent) {
@@ -55,6 +87,26 @@ export function NewRegulering() {
 
     setError("");
     setSaving(true);
+    const eksisterende = await finnEksisterendeMatrikkelnumre(
+      grensejustering.tilKommunenummer,
+      matrikkelnumreITilKommune(matrikkelenheter),
+    ).catch(() => null);
+    if (!eksisterende) {
+      setError("Kunne ikke sjekke matrikkelnumrene mot matrikkelen. Prøv igjen.");
+      setSaving(false);
+      return;
+    }
+    const opptatt = finnOpptattMatrikkelnummer(
+      matrikkelenheter,
+      grensejustering.tilKommunenummer,
+      eksisterende,
+    );
+    if (opptatt) {
+      setError(opptatt);
+      setSaving(false);
+      return;
+    }
+
     try {
       const id = await createRegulering({ navn, dato, grensejustering });
       clearMatrikkelenheter();
@@ -113,11 +165,60 @@ export function NewRegulering() {
                 onChange={(event) => toggleHeleGardsnummer(nokkel, event.target.checked)}
               />
             ))}
-            <ul>
-              {matrikkelenheter.map((item) => (
-                <li key={formatMatrikkelnummer(item)}>{formatMatrikkelnummer(item)}</li>
-              ))}
-            </ul>
+            <Paragraph data-size="sm">
+              Fyll inn nytt gårds- og bruksnummer der matrikkelenheten skal få nytt nummer i til
+              kommune. Tomme felt beholder dagens nummer.
+            </Paragraph>
+            <div className="regulering-table-wrapper">
+              <Table data-size="sm" zebra>
+                <Table.Head>
+                  <Table.Row>
+                    <Table.HeaderCell>Matrikkelenhet</Table.HeaderCell>
+                    <Table.HeaderCell>Nytt gårdsnummer</Table.HeaderCell>
+                    <Table.HeaderCell>Nytt bruksnummer</Table.HeaderCell>
+                  </Table.Row>
+                </Table.Head>
+                <Table.Body>
+                  {matrikkelenheter.map((item) => {
+                    const nokkel = formatMatrikkelnummer(item);
+                    const input = nyeNumre.get(nokkel);
+                    return (
+                      <Table.Row key={nokkel}>
+                        <Table.Cell>{nokkel}</Table.Cell>
+                        <Table.Cell>
+                          <Input
+                            className="matrikkelnummer-input"
+                            aria-label={`Nytt gårdsnummer for ${nokkel}`}
+                            inputMode="numeric"
+                            placeholder={String(item.gardsnummer)}
+                            value={input?.gardsnummer ?? ""}
+                            onChange={(event) =>
+                              endreNyttNummer(nokkel, "gardsnummer", event.target.value)
+                            }
+                          />
+                        </Table.Cell>
+                        <Table.Cell>
+                          {item.bruksnummer === null ? (
+                            "Beholdes"
+                          ) : (
+                            <Input
+                              className="matrikkelnummer-input"
+                              aria-label={`Nytt bruksnummer for ${nokkel}`}
+                              inputMode="numeric"
+                              placeholder={String(item.bruksnummer)}
+                              value={input?.bruksnummer ?? ""}
+                              onChange={(event) =>
+                                endreNyttNummer(nokkel, "bruksnummer", event.target.value)
+                              }
+                            />
+                          )}
+                        </Table.Cell>
+                      </Table.Row>
+                    );
+                  })}
+                </Table.Body>
+              </Table>
+            </div>
             {utenMatrikkelnummer > 0 && (
               <Paragraph>{utenMatrikkelnummer} teig(er) uten matrikkelnummer er valgt.</Paragraph>
             )}

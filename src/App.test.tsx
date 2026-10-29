@@ -38,6 +38,28 @@ function selectMatrikkelenhet() {
     .addMatrikkelenhet("0301/1/1", { id: "0301/1/1", features: [selectedTeig] });
 }
 
+// Svarer som eiendoms-API-ets geokoding: treff for matrikkelnumrene som finnes i til kommune.
+// Teig-WFS-en (hele gårdsnumre) får alltid et tomt svar.
+function stubEksisterendeMatrikkelnumre(...eksisterende: string[]) {
+  const tomWfs =
+    '<wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"></wfs:FeatureCollection>';
+  const fetchMock = vi
+    .fn<(url: string) => Promise<Pick<Response, "ok" | "status" | "json" | "text">>>()
+    .mockImplementation((url) => {
+      const params = new URL(url).searchParams;
+      const nummer = `${params.get("gardsnummer")}/${params.get("bruksnummer")}`;
+      const features = eksisterende.includes(nummer) ? [{}] : [];
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ features }),
+        text: () => Promise.resolve(tomWfs),
+      });
+    });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
 async function fillInAndSubmit() {
   await userEvent.type(await screen.findByRole("textbox", { name: "Navn" }), "Ny regulering");
   await userEvent.type(screen.getByLabelText("Ikrafttredelsesdato"), "2026-10-21");
@@ -49,6 +71,7 @@ describe("App", () => {
   beforeEach(() => {
     useMatrikkelenheter.getState().clearMatrikkelenheter();
     localStorage.removeItem(REGULERINGER_STORAGE_KEY);
+    stubEksisterendeMatrikkelnumre();
   });
 
   it("renders the front page with the nav", async () => {
@@ -96,7 +119,76 @@ describe("App", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Ny regulering" })).toBeVisible();
     expect(screen.getByText("0301 → 0302")).toBeVisible();
-    expect(screen.getByRole("row", { name: "1 1 1" })).toBeVisible();
+    expect(screen.getByRole("row", { name: "1 1 1 Uendret" })).toBeVisible();
+  });
+
+  it("saves a new matrikkelnummer in til kommune", async () => {
+    selectMatrikkelenhet();
+    renderAt("/reguleringer/ny");
+
+    await userEvent.type(
+      await screen.findByRole("textbox", { name: "Nytt gårdsnummer for 0301-1/1" }),
+      "201",
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Nytt bruksnummer for 0301-1/1" }),
+      "5",
+    );
+    await fillInAndSubmit();
+
+    expect(await screen.findByRole("row", { name: "1 1 1 201/5" })).toBeVisible();
+  });
+
+  it("rejects a new matrikkelnummer that is not a positive integer", async () => {
+    selectMatrikkelenhet();
+    renderAt("/reguleringer/ny");
+
+    await userEvent.type(
+      await screen.findByRole("textbox", { name: "Nytt gårdsnummer for 0301-1/1" }),
+      "abc",
+    );
+    await fillInAndSubmit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("positive heltall");
+  });
+
+  it("rejects a matrikkelnummer that already exists in til kommune", async () => {
+    stubEksisterendeMatrikkelnumre("1/1", "1/2");
+    selectMatrikkelenhet();
+    renderAt("/reguleringer/ny");
+
+    await fillInAndSubmit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "0301-1/1 får 1/1, som allerede finnes i 0302",
+    );
+    expect(useMatrikkelenheter.getState().matrikkelenheter.has("0301/1/1")).toBe(true);
+  });
+
+  it("accepts a new matrikkelnummer that is free in til kommune", async () => {
+    const fetchMock = stubEksisterendeMatrikkelnumre("1/1", "1/2");
+    selectMatrikkelenhet();
+    renderAt("/reguleringer/ny");
+
+    await userEvent.type(
+      await screen.findByRole("textbox", { name: "Nytt bruksnummer for 0301-1/1" }),
+      "3",
+    );
+    await fillInAndSubmit();
+
+    expect(await screen.findByRole("row", { name: "1 1 1 1/3" })).toBeVisible();
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("does not create the regulation when the matrikkel check fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Nettverksfeil")));
+    selectMatrikkelenhet();
+    renderAt("/reguleringer/ny");
+
+    await fillInAndSubmit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Kunne ikke sjekke");
+    expect(localStorage.getItem(REGULERINGER_STORAGE_KEY)).toBeNull();
   });
 
   it("moves a whole gårdsnummer when chosen", async () => {
