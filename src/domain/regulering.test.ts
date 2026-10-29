@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   formatMatrikkelnummer,
   lagMatrikkelenhetDraft,
+  medHeleGardsnummer,
   validerGrensejustering,
   type MatrikkelenhetDraft,
 } from "./regulering";
@@ -32,9 +33,28 @@ describe("lagMatrikkelenhetDraft", () => {
   });
 });
 
+describe("medHeleGardsnummer", () => {
+  const bnr3 = { ...enhet, bruksnummer: 3, teigIder: [2] };
+  const annenGard = { ...enhet, gardsnummer: 5, teigIder: [3] };
+
+  it("slår sammen bruksnumrene i valgte gårdsnumre", () => {
+    expect(medHeleGardsnummer([enhet, bnr3, annenGard], new Set(["0301-1"]))).toEqual([
+      { ...enhet, bruksnummer: null, teigIder: [1, 2] },
+      annenGard,
+    ]);
+  });
+
+  it("lar resten være uendret", () => {
+    expect(medHeleGardsnummer([enhet, bnr3], new Set())).toEqual([enhet, bnr3]);
+  });
+});
+
 describe("formatMatrikkelnummer", () => {
-  it("viser kommune, gårdsnummer og bruksnummer", () => {
+  it("viser gårdsnummer med og uten bruksnummer", () => {
     expect(formatMatrikkelnummer(enhet)).toBe("0301-1/2");
+    expect(formatMatrikkelnummer({ ...enhet, bruksnummer: null })).toBe(
+      "0301-1 (hele gårdsnummeret)",
+    );
   });
 });
 

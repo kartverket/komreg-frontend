@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Button, Heading, Paragraph, Textfield } from "@kv-designsystem/react";
+import { Button, Checkbox, Heading, Paragraph, Textfield } from "@kv-designsystem/react";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { createRegulering } from "@/api/reguleringer";
 import {
   formatMatrikkelnummer,
+  gardsnummerNokkel,
   lagMatrikkelenhetDraft,
+  medHeleGardsnummer,
   validerGrensejustering,
   type GrensejusteringDraft,
 } from "@/domain/regulering";
@@ -16,13 +18,23 @@ export function NewRegulering() {
   const clearMatrikkelenheter = useMatrikkelenheter((state) => state.clearMatrikkelenheter);
   const drafts = Array.from(valgte.values(), lagMatrikkelenhetDraft);
   const utenMatrikkelnummer = drafts.filter((draft) => draft === null).length;
-  const matrikkelenheter = drafts.filter((draft) => draft !== null);
+  const valgteEnheter = drafts.filter((draft) => draft !== null);
+  const gardsnumre = [...new Set(valgteEnheter.map(gardsnummerNokkel))];
+  const [heleGardsnummer, setHeleGardsnummer] = useState<ReadonlySet<string>>(new Set());
+  const matrikkelenheter = medHeleGardsnummer(valgteEnheter, heleGardsnummer);
   const [navn, setNavn] = useState("");
   const [dato, setDato] = useState("");
-  const [fraKommune, setFraKommune] = useState(matrikkelenheter[0]?.kommunenummer ?? "");
+  const [fraKommune, setFraKommune] = useState(valgteEnheter[0]?.kommunenummer ?? "");
   const [tilKommune, setTilKommune] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  function toggleHeleGardsnummer(nokkel: string, checked: boolean) {
+    const neste = new Set(heleGardsnummer);
+    if (checked) neste.add(nokkel);
+    else neste.delete(nokkel);
+    setHeleGardsnummer(neste);
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -93,6 +105,14 @@ export function NewRegulering() {
             <Heading level={2} data-size="xs">
               Matrikkelenheter ({matrikkelenheter.length})
             </Heading>
+            {gardsnumre.map((nokkel) => (
+              <Checkbox
+                key={nokkel}
+                label={`Flytt hele gårdsnummer ${nokkel}`}
+                checked={heleGardsnummer.has(nokkel)}
+                onChange={(event) => toggleHeleGardsnummer(nokkel, event.target.checked)}
+              />
+            ))}
             <ul>
               {matrikkelenheter.map((item) => (
                 <li key={formatMatrikkelnummer(item)}>{formatMatrikkelnummer(item)}</li>
