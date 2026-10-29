@@ -14,6 +14,7 @@ import { Link } from "@kv-designsystem/react";
 import { ErrorPage } from "./pages/ErrorPage";
 import { Home } from "./pages/Home";
 import { NotFound } from "./pages/NotFound";
+import { NewRegulering } from "./pages/NewRegulering";
 import { ReguleringDetail } from "./pages/ReguleringDetail";
 import { Reguleringer } from "./pages/Reguleringer";
 
@@ -71,6 +72,11 @@ function createAppRouter(history: RouterHistory) {
     layout.addChildren([
       createRoute({ getParentRoute: () => layout, path: "/", component: Home }),
       createRoute({ getParentRoute: () => layout, path: "/reguleringer", component: Reguleringer }),
+      createRoute({
+        getParentRoute: () => layout,
+        path: "/reguleringer/ny",
+        component: NewRegulering,
+      }),
       createRoute({
         getParentRoute: () => layout,
         path: "/reguleringer/$reguleringId",
