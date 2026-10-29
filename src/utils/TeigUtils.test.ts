@@ -1,7 +1,58 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { Feature } from "ol";
 import Polygon from "ol/geom/Polygon";
-import { teigFeatureToTeigResponse } from "@/utils/TeigUtils";
+import { matrikkelnummerFinnes, teigFeatureToTeigResponse } from "@/utils/TeigUtils";
+
+type FetchMock = (input: string, init?: RequestInit) => Promise<Partial<Response>>;
+
+describe("matrikkelnummerFinnes", () => {
+  const nummer = { gardsnummer: 1, bruksnummer: 2 };
+
+  it("slår opp gårds- og bruksnummer direkte i eiendoms-API-et", async () => {
+    const fetchMock = vi.fn<FetchMock>().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ features: [{}] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(matrikkelnummerFinnes("0302", nummer)).resolves.toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/geokoding?kommunenummer=0302&gardsnummer=1&bruksnummer=2"),
+    );
+  });
+
+  it("svarer nei når eiendoms-API-et ikke finner nummeret", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ features: [] }) }),
+    );
+
+    await expect(matrikkelnummerFinnes("0302", nummer)).resolves.toBe(false);
+  });
+
+  it("feiler når eiendoms-API-et svarer med feil", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+
+    await expect(matrikkelnummerFinnes("0302", nummer)).rejects.toThrow("500");
+  });
+
+  it("slår opp et helt gårdsnummer i Teig-WFS-en og ber om ett treff", async () => {
+    const fetchMock = vi.fn<FetchMock>().mockResolvedValue({
+      ok: true,
+      text: () =>
+        Promise.resolve(
+          '<wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"></wfs:FeatureCollection>',
+        ),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const helGard = { gardsnummer: 1, bruksnummer: null };
+    await expect(matrikkelnummerFinnes("0302", helGard)).resolves.toBe(false);
+    const body = fetchMock.mock.calls[0]?.[1]?.body;
+    expect(body).toEqual(expect.stringContaining('count="1"'));
+    expect(body).toEqual(expect.stringContaining("app:gardsnummer"));
+  });
+});
 
 describe("TeigUtils", () => {
   describe("teigFeatureToTeigResponse", () => {
