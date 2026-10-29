@@ -74,9 +74,7 @@ describe("medNyeMatrikkelnumre", () => {
     const nyeNumre = new Map([
       ["0301-1 (hele gårdsnummeret)", { gardsnummer: "201", bruksnummer: "7" }],
     ]);
-    expect(medNyeMatrikkelnumre([helGard], nyeNumre)).toEqual([
-      { ...helGard, nyGardsnummer: 201 },
-    ]);
+    expect(medNyeMatrikkelnumre([helGard], nyeNumre)).toEqual([{ ...helGard, nyGardsnummer: 201 }]);
   });
 
   it("lar enheter uten tastede numre være uendret", () => {

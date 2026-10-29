@@ -3,11 +3,13 @@ import { Feature } from "ol";
 import Polygon from "ol/geom/Polygon";
 import { matrikkelnummerFinnes, teigFeatureToTeigResponse } from "@/utils/TeigUtils";
 
+type FetchMock = (input: string, init?: RequestInit) => Promise<Partial<Response>>;
+
 describe("matrikkelnummerFinnes", () => {
   const nummer = { gardsnummer: 1, bruksnummer: 2 };
 
   it("slår opp gårds- og bruksnummer direkte i eiendoms-API-et", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
+    const fetchMock = vi.fn<FetchMock>().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ features: [{}] }),
     });
@@ -35,7 +37,7 @@ describe("matrikkelnummerFinnes", () => {
   });
 
   it("slår opp et helt gårdsnummer i Teig-WFS-en og ber om ett treff", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
+    const fetchMock = vi.fn<FetchMock>().mockResolvedValue({
       ok: true,
       text: () =>
         Promise.resolve(
@@ -46,9 +48,9 @@ describe("matrikkelnummerFinnes", () => {
 
     const helGard = { gardsnummer: 1, bruksnummer: null };
     await expect(matrikkelnummerFinnes("0302", helGard)).resolves.toBe(false);
-    const body = String((fetchMock.mock.calls[0]?.[1] as RequestInit).body);
-    expect(body).toContain('count="1"');
-    expect(body).toContain("app:gardsnummer");
+    const body = fetchMock.mock.calls[0]?.[1]?.body;
+    expect(body).toEqual(expect.stringContaining('count="1"'));
+    expect(body).toEqual(expect.stringContaining("app:gardsnummer"));
   });
 });
 
