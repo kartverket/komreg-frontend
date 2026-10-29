@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryHistory } from "@tanstack/react-router";
-import { describe, expect, it, vi } from "vite-plus/test";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { createRegulering, REGULERINGER_STORAGE_KEY } from "./api/reguleringer";
 import { App } from "./App";
 
 function renderAt(path: string) {
@@ -9,6 +10,10 @@ function renderAt(path: string) {
 }
 
 describe("App", () => {
+  beforeEach(() => {
+    localStorage.removeItem(REGULERINGER_STORAGE_KEY);
+  });
+
   it("renders the front page with the nav", async () => {
     renderAt("/");
     expect(await screen.findByRole("heading", { level: 1, name: "KomReg" })).toBeVisible();
@@ -44,6 +49,32 @@ describe("App", () => {
     renderAt("/finnes-ikke");
     expect(await screen.findByRole("heading", { name: "Fant ikke siden" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Gå til forsiden" })).toBeVisible();
+  });
+
+  it("shows saved regulations in a table", async () => {
+    await createRegulering({
+      navn: "Lagret regulering",
+      dato: "2026-10-21",
+      grensejustering: {
+        fraKommunenummer: "0301",
+        tilKommunenummer: "0302",
+        matrikkelenheter: [],
+      },
+    });
+
+    renderAt("/reguleringer");
+
+    expect(await screen.findByRole("table")).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "Fra kommune" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Lagret regulering" })).toBeVisible();
+
+    await userEvent.click(screen.getByRole("cell", { name: "0301" }));
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Lagret regulering" }),
+    ).toBeVisible();
+
+    await userEvent.click(screen.getByRole("link", { name: "Tilbake til reguleringer" }));
+    expect(await screen.findByRole("table")).toBeVisible();
   });
 
   it("shows our error page, with the nav, when a page throws", async () => {
