@@ -90,7 +90,7 @@ export function NewRegulering() {
     const eksisterende = await finnEksisterendeMatrikkelnumre(
       grensejustering.tilKommunenummer,
       matrikkelnumreITilKommune(matrikkelenheter),
-    ).catch(() => null);
+    ).catch((error) => console.log(error));
     if (!eksisterende) {
       setError("Kunne ikke sjekke matrikkelnumrene mot matrikkelen. Prøv igjen.");
       setSaving(false);
