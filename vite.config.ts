@@ -39,6 +39,10 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test-setup.ts"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "cobertura"],
+    },
   },
   // React Compiler through the Rolldown babel preset. @vitejs/plugin-react 6 silently ignores
   // the older `react({ babel: { plugins } })` form, so this is the wiring that actually runs.
