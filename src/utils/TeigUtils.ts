@@ -8,6 +8,7 @@ import type { Coordinate } from "ol/coordinate";
 import { fetchGrunnkretsAtPoint } from "@/utils/GrunnkretsUtils";
 import type { MatrikkelenhetResponse } from "@/types/Matrikkelenhet";
 import type { Address } from "@/types/Address";
+import { transform } from "ol/proj";
 
 export async function getAllTeigerInGrunnkretsAtPoint(
   coordinate: Coordinate,
@@ -116,65 +117,73 @@ export async function fetchTeigAtPoint(coordinates: Coordinate): Promise<TeigRes
   return data.features.at(0);
 }
 
-export async function getMatrikkelenhetAtPoint(
+export async function getMatrikkelenheterConnectedToTeigAtPoint(
   coordinates: Coordinate,
-): Promise<MatrikkelenhetResponse | undefined> {
-  const teig = await fetchTeigAtPoint(coordinates);
-  if (!teig) {
-    return undefined;
-  }
-  const kommunnenummer = teig.properties.kommunenummer;
-  const gardsnummer = teig.properties.gardsnummer;
-  const bruksnummer = teig.properties.bruksnummer;
+): Promise<MatrikkelenhetResponse[] | undefined> {
+  //convert coordinates to utm33
+  const utm33Coordinates = transform(coordinates, "EPSG:3857", "EPSG:32633");
 
-  // Teiger without a matrikkelnummer ("Mnr mangler") can't be looked up, so they form their own enhet.
-  if (gardsnummer === null || bruksnummer === null) {
-    return { id: `teig/${teig.properties.lokalid}`, features: [teig] };
-  }
+  const url = new URL(`http://localhost:8082/point/cadestral_unit`);
+  url.searchParams.append("easting", String(utm33Coordinates[0]));
+  url.searchParams.append("northing", String(utm33Coordinates[1]));
 
-  const [addresses, matrikkelenhet] = await Promise.all([
-    getAllAddressesForMatrikkelenhet(kommunnenummer, gardsnummer, bruksnummer),
-    getAllTeigerForMatrikkelenhet(kommunnenummer, gardsnummer, bruksnummer),
-  ]);
-
-  if (!matrikkelenhet.features || matrikkelenhet.features.length === 0) return undefined;
-
-  return {
-    id: kommunnenummer + "/" + gardsnummer + "/" + bruksnummer,
-    addresses,
-    ...matrikkelenhet,
-  };
-}
-
-async function getAllAddressesForMatrikkelenhet(
-  kommunenummer: string,
-  gardsnummer: number,
-  bruksnummer: number,
-): Promise<Address[]> {
-  const url = `https://ws.geonorge.no/adresser/v1/sok?kommunenummer=${kommunenummer}&gardsnummer=${gardsnummer}&bruksnummer=${bruksnummer}&utkoordsys=3857&objtype=Vegadresse`;
   const res = await fetch(url);
   if (!res.ok) {
-    throw new Error(`Kartverket API returned HTTP ${res.status}`);
+    throw new Error(`Local API returned HTTP ${res.status}`);
   }
-  const data = await res.json();
-  if (!data.adresser) {
-    return [];
-  }
-  return data.adresser as Address[];
-}
+  const cadastralUnitsConnectedToParcel = (await res.json()) as {
+    coveringParcelId: number;
+    cadestralUnits: {
+      id: number;
+      cadastralNumber: { municipalityNumber: string; landNumber: number; titleNumber: number };
+      mainParcelId: number;
+      otherParcelIds: number[];
+    }[];
+    features: {
+      type: "FeatureCollection";
+      features: TeigResponse[];
+    };
+  };
 
-function getAllTeigerForMatrikkelenhet(
-  kommunenummer: string,
-  gardsnummer: number,
-  bruksnummer: number,
-): Promise<Omit<MatrikkelenhetResponse, "id">> {
-  const url = `https://api.kartverket.no/eiendom/v1/geokoding?kommunenummer=${kommunenummer}&gardsnummer=${gardsnummer}&bruksnummer=${bruksnummer}&omrade=true&utkoordsys=3857`;
-  return fetch(url)
-    .then((res) => {
-      if (!res.ok) {
-        throw new Error(`Kartverket API returned HTTP ${res.status}`);
-      }
-      return res.json();
-    })
-    .then((data: Omit<MatrikkelenhetResponse, "id">) => data);
+  //convert all features from utm33 to 3857
+  cadastralUnitsConnectedToParcel.features.features.forEach((feature) => {
+    feature.geometry.coordinates = feature.geometry.coordinates.map((ring) =>
+      ring.map((coord) => transform(coord, "EPSG:32633", "EPSG:3857")),
+    );
+  });
+
+  const matrikkelEnheterForTeig = cadastralUnitsConnectedToParcel.cadestralUnits;
+
+  //hvis teigen er mnr mangler eller mnr mangler vann, og ikke er koblet til noen andre matrikkelenheter kan vi legge til bare den ene teigen
+  if (
+    matrikkelEnheterForTeig.length == 1 &&
+    matrikkelEnheterForTeig[0]?.cadastralNumber.landNumber == 0 &&
+    (matrikkelEnheterForTeig[0]?.cadastralNumber.titleNumber == 0 ||
+      matrikkelEnheterForTeig[0]?.cadastralNumber.titleNumber == 1)
+  ) {
+    //TODO: return teig alone
+    console.log("Teig er mnr mangler eller mnr mangler vann");
+    return;
+  }
+
+  const matrikkelenheter: MatrikkelenhetResponse[] = matrikkelEnheterForTeig.map(
+    (matrikkelenhet) => ({
+      id: String(matrikkelenhet.id),
+      connectedToOtherUnits: matrikkelEnheterForTeig
+        .filter((m) => m.id !== matrikkelenhet.id)
+        .map((m) => String(m.id)),
+      matrikkelnummer: {
+        kommunenummer: matrikkelenhet.cadastralNumber.municipalityNumber,
+        gardsnummer: matrikkelenhet.cadastralNumber.landNumber,
+        bruksnummer: matrikkelenhet.cadastralNumber.titleNumber,
+      },
+      addresses: [], //TODO: Get addresses from matrikkelenhet
+      features: cadastralUnitsConnectedToParcel.features.features.filter(
+        (feature) =>
+          matrikkelenhet.mainParcelId === feature.properties.parcelId ||
+          matrikkelenhet.otherParcelIds.includes(feature.properties.parcelId),
+      ),
+    }),
+  );
+  return matrikkelenheter;
 }

@@ -5,4 +5,5 @@ export type MatrikkelenhetResponse = {
   id: string;
   features: TeigResponse[];
   addresses?: Address[];
+  connectedToOtherUnits?: string[];
 };

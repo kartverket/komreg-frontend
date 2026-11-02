@@ -21,7 +21,13 @@ export const useMatrikkelenheter = create<{
   removeMatrikkelenhet: (id: string) =>
     set((state) => {
       const matrikkelenheter = new Map(state.matrikkelenheter);
-      matrikkelenheter.delete(id);
+      const enhetToDelete = matrikkelenheter.get(id);
+      if (enhetToDelete) {
+        enhetToDelete.connectedToOtherUnits?.forEach((connectedId) => {
+          matrikkelenheter.delete(connectedId);
+        });
+        matrikkelenheter.delete(id);
+      }
       return { matrikkelenheter };
     }),
 }));

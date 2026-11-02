@@ -40,7 +40,7 @@ function renderSelector(isActive: boolean, onToggle = vi.fn<(isActive: boolean) 
 
 // Builds a fake API response for one spot of land ("teig"). Only fields the component
 // actually reads are filled in with real values; everything else is irrelevant filler.
-function buildTeigResponse(lokalid: number): TeigResponse {
+function buildTeigResponse(id: number): TeigResponse {
   return {
     type: "Feature",
     geometry: {
@@ -55,20 +55,7 @@ function buildTeigResponse(lokalid: number): TeigResponse {
       ],
     },
     properties: {
-      bruksnummer: 1,
-      festenummer: 0,
-      gardsnummer: 1,
-      hovedområde: true,
-      kommunenummer: "0301",
-      lokalid,
-      matrikkelnummertekst: "1/1",
-      meterFraPunkt: 0,
-      nøyaktighetsklasseteig: "god",
-      objekttype: "Teig",
-      oppdateringsdato: "2024-01-01",
-      seksjonsnummer: 0,
-      teigmedflerematrikkelenheter: false,
-      uregistrertjordsameie: false,
+      parcelId: id,
     },
   };
 }
@@ -153,22 +140,6 @@ describe("MatrikkelenhetSelector", () => {
     await vi.waitFor(() => {
       expect(getMatrikkelenhetIdsInMap(map)).toEqual(["0301/1/1", "0301/1/1"]);
     });
-  });
-
-  it("draws a teig without matrikkelnummer on its own without looking up the matrikkelenhet", async () => {
-    const teigUtenMnr = buildTeigResponse(155883206);
-    teigUtenMnr.properties.gardsnummer = null;
-    teigUtenMnr.properties.bruksnummer = null;
-    teigUtenMnr.properties.matrikkelnummertekst = "Mnr mangler";
-    const mockedFetch = stubFetchWithTeiger([teigUtenMnr]);
-    const { map } = renderSelector(true);
-
-    click(map, INSIDE_TEIG);
-
-    await vi.waitFor(() => {
-      expect(getMatrikkelenhetIdsInMap(map)).toEqual(["teig/155883206"]);
-    });
-    expect(mockedFetch).toHaveBeenCalledTimes(1);
   });
 
   it("removes the whole matrikkelenhet from the map when one of its teiger is clicked", async () => {

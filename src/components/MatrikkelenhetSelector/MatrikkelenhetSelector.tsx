@@ -12,7 +12,7 @@ import type VectorSource from "ol/source/Vector";
 import type { Coordinate } from "ol/coordinate";
 import { VectorLayer } from "../Map/VectorLayer";
 import { useVectorSource } from "../Map/VectorLayerContext";
-import { getMatrikkelenhetAtPoint } from "@/utils/TeigUtils";
+import { getMatrikkelenheterConnectedToTeigAtPoint } from "@/utils/TeigUtils";
 import type { TeigResponse } from "@/types/TeigResponse";
 import type { MatrikkelenhetResponse } from "@/types/Matrikkelenhet";
 import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
@@ -88,16 +88,20 @@ function MapClickInteraction() {
         return;
       }
 
-      let res: MatrikkelenhetResponse | undefined;
+      let res: MatrikkelenhetResponse[] | undefined;
       try {
-        res = await withWaitCursor(map, () => getMatrikkelenhetAtPoint(e.coordinate));
+        res = await withWaitCursor(map, () =>
+          getMatrikkelenheterConnectedToTeigAtPoint(e.coordinate),
+        );
       } catch (error) {
         console.error("Failed to retrieve matrikkelenhet", error);
         return;
       }
 
       if (res && active) {
-        useMatrikkelenheter.getState().addMatrikkelenhet(res.id, res);
+        res.forEach((matrikkelenhet) => {
+          useMatrikkelenheter.getState().addMatrikkelenhet(matrikkelenhet.id, matrikkelenhet);
+        });
       }
     }
 
@@ -132,7 +136,7 @@ function Matrikkelenhet({ enhet }: { enhet: MatrikkelenhetResponse }) {
           />
         ))}
       {enhet.features.map((teig) => (
-        <Teig key={teig.properties.lokalid} geometry={teig.geometry} enhetId={enhet.id} />
+        <Teig key={teig.properties.parcelId} geometry={teig.geometry} enhetId={enhet.id} />
       ))}
     </>
   );
