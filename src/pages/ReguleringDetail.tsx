@@ -77,6 +77,29 @@ export function ReguleringDetail() {
               </Table.Body>
             </Table>
           </div>
+          {regulering.grensejustering.teiger.length > 0 && (
+            <>
+              <Heading level={2} data-size="sm">
+                Teiger uten matrikkelnummer
+              </Heading>
+              <div className="regulering-table-wrapper">
+                <Table data-size="sm" zebra>
+                  <Table.Head>
+                    <Table.Row>
+                      <Table.HeaderCell>Teig-ID</Table.HeaderCell>
+                    </Table.Row>
+                  </Table.Head>
+                  <Table.Body>
+                    {regulering.grensejustering.teiger.map((teig) => (
+                      <Table.Row key={teig.teigId}>
+                        <Table.Cell>{teig.teigId}</Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table>
+              </div>
+            </>
+          )}
         </>
       )}
     </>
