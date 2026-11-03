@@ -15,10 +15,18 @@ export type NyttMatrikkelnummerInput = {
   bruksnummer: string;
 };
 
+// En teig uten matrikkelnummer («Mnr mangler»). Den flyttes på teig-ID og beholder ID-en, så
+// den er fortsatt uten matrikkelnummer i til kommune.
+export type TeigDraft = {
+  kommunenummer: string;
+  teigId: number;
+};
+
 export type GrensejusteringDraft = {
   fraKommunenummer: string;
   tilKommunenummer: string;
   matrikkelenheter: MatrikkelenhetDraft[];
+  teiger: TeigDraft[];
 };
 
 export type OpprettReguleringRequest = {
@@ -63,6 +71,15 @@ export function lagMatrikkelenhetDraft(enhet: ValgtMatrikkelenhet): Matrikkelenh
     bruksnummer: first.bruksnummer,
     teigIder: enhet.features.map((teig) => teig.properties.lokalid),
   };
+}
+
+export function lagTeigDraft(enhet: ValgtMatrikkelenhet): TeigDraft[] {
+  return enhet.features
+    .filter(({ properties }) => properties.gardsnummer === null || properties.bruksnummer === null)
+    .map(({ properties }) => ({
+      kommunenummer: properties.kommunenummer,
+      teigId: properties.lokalid,
+    }));
 }
 
 export function gardsnummerNokkel({ kommunenummer, gardsnummer }: MatrikkelenhetDraft): string {
@@ -203,7 +220,7 @@ export function finnOpptattMatrikkelnummer(
 const KOMMUNENUMMER = /^\d{4}$/;
 
 export function validerGrensejustering(grensejustering: GrensejusteringDraft): string | null {
-  const { fraKommunenummer, tilKommunenummer, matrikkelenheter } = grensejustering;
+  const { fraKommunenummer, tilKommunenummer, matrikkelenheter, teiger } = grensejustering;
   if (!KOMMUNENUMMER.test(fraKommunenummer))
     return "Fra kommune må være et firesifret kommunenummer";
   if (!KOMMUNENUMMER.test(tilKommunenummer))
@@ -211,6 +228,9 @@ export function validerGrensejustering(grensejustering: GrensejusteringDraft): s
   if (fraKommunenummer === tilKommunenummer) return "Fra og til kommune må være forskjellige";
   if (matrikkelenheter.some((item) => item.kommunenummer !== fraKommunenummer)) {
     return "Alle valgte matrikkelenheter må ligge i fra kommune";
+  }
+  if (teiger.some((teig) => teig.kommunenummer !== fraKommunenummer)) {
+    return "Alle valgte teiger uten matrikkelnummer må ligge i fra kommune";
   }
   const ugyldig = matrikkelenheter.find(
     (item) => !gyldigNummer(item.nyGardsnummer) || !gyldigNummer(item.nyBruksnummer),

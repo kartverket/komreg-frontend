@@ -38,6 +38,22 @@ function selectMatrikkelenhet() {
     .addMatrikkelenhet("0301/1/1", { id: "0301/1/1", features: [selectedTeig] });
 }
 
+function selectTeigUtenMatrikkelnummer() {
+  const teig: TeigResponse = {
+    ...selectedTeig,
+    properties: {
+      ...selectedTeig.properties,
+      gardsnummer: null,
+      bruksnummer: null,
+      lokalid: 456,
+      matrikkelnummertekst: "Mnr mangler",
+    },
+  };
+  useMatrikkelenheter
+    .getState()
+    .addMatrikkelenhet("teig/456", { id: "teig/456", features: [teig] });
+}
+
 // Svarer som eiendoms-API-ets geokoding: treff for matrikkelnumrene som finnes i til kommune.
 // Teig-WFS-en (hele gårdsnumre) får alltid et tomt svar.
 function stubEksisterendeMatrikkelnumre(...eksisterende: string[]) {
@@ -191,6 +207,15 @@ describe("App", () => {
     expect(localStorage.getItem(REGULERINGER_STORAGE_KEY)).toBeNull();
   });
 
+  it("moves a teig without matrikkelnummer to til kommune", async () => {
+    selectTeigUtenMatrikkelnummer();
+    renderAt("/reguleringer/ny");
+
+    await fillInAndSubmit();
+
+    expect(await screen.findByRole("row", { name: "456" })).toBeVisible();
+  });
+
   it("moves a whole gårdsnummer when chosen", async () => {
     selectMatrikkelenhet();
     renderAt("/reguleringer/ny");
@@ -211,6 +236,7 @@ describe("App", () => {
         fraKommunenummer: "0301",
         tilKommunenummer: "0302",
         matrikkelenheter: [],
+        teiger: [],
       },
     });
 
