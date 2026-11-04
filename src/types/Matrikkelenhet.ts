@@ -6,7 +6,7 @@ export type Matrikkelenhet = {
   features: Teig[];
   addresses?: Address[];
   connectedToOtherUnits?: string[];
-  matrikkelnummer?: {
+  matrikkelnummer: {
     kommunenummer: string;
     gardsnummer: number;
     bruksnummer: number;

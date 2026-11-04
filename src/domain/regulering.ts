@@ -47,7 +47,7 @@ export function lagMatrikkelenhetDraft(enhet: Matrikkelenhet): MatrikkelenhetDra
     kommunenummer: enhet.matrikkelnummer?.kommunenummer,
     gardsnummer: enhet.matrikkelnummer?.gardsnummer,
     bruksnummer: enhet.matrikkelnummer?.bruksnummer,
-    teigIder: enhet.features.map((teig) => teig.properties.parcelId),
+    teigIder: enhet.features.map((teig) => teig.properties.lokalid),
   };
 }
 

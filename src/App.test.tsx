@@ -15,7 +15,7 @@ const selectedTeig: Teig = {
   type: "Feature",
   geometry: { type: "Polygon", coordinates: [] },
   properties: {
-    parcelId: 123456,
+    lokalid: 123456,
   },
 };
 

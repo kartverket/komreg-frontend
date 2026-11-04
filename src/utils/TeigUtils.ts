@@ -33,7 +33,7 @@ type ReguleringApiParcel = {
   };
 };
 
-type ReguleringApiResponse = {
+export type ReguleringApiResponse = {
   type: "FeatureCollection";
   features: (ReguleringApiAddress | ReguleringApiParcel)[];
   crs: { type: "name"; properties: { name: string } };
@@ -45,7 +45,7 @@ export async function getMatrikkelenheterConnectedToTeigAtPoint(
   //convert coordinates to utm33
   const utm33Coordinates = transform(coordinates, "EPSG:3857", "EPSG:32633");
 
-  //TODO: Route the calls throug caddy
+  //TODO: Route the calls through caddy
   const url = new URL(`http://localhost:8082/point/cadestral_unit`);
   url.searchParams.append("easting", String(utm33Coordinates[0]));
   url.searchParams.append("northing", String(utm33Coordinates[1]));
@@ -55,7 +55,7 @@ export async function getMatrikkelenheterConnectedToTeigAtPoint(
     throw new Error(`API call failed with status: ${res.status}`);
   }
   const cadastralUnitsConnectedToParcel = (await res.json()) as ReguleringApiResponse;
-  const matrikkelEnheterForTeig = reguleringApiToMatrikkelResponse(cadastralUnitsConnectedToParcel);
+  const matrikkelEnheterForTeig = reguleringApiToMatrikkelEnhet(cadastralUnitsConnectedToParcel);
 
   //hvis teigen er mnr mangler eller mnr mangler vann, og ikke er koblet til noen andre matrikkelenheter kan vi legge til bare den ene teigen
   if (
@@ -71,7 +71,7 @@ export async function getMatrikkelenheterConnectedToTeigAtPoint(
   return matrikkelEnheterForTeig;
 }
 
-function reguleringApiToMatrikkelResponse(input: ReguleringApiResponse): Matrikkelenhet[] {
+function reguleringApiToMatrikkelEnhet(input: ReguleringApiResponse): Matrikkelenhet[] {
   const teiger = input.features.filter((feature) => feature.featureType === "Parcel");
   const addresser = input.features.filter((feature) => feature.featureType === "Address");
   const matrikkelenheter = new Map<string, Matrikkelenhet>();
@@ -146,7 +146,7 @@ function reguleringApiParcelToTeigResponse(input: ReguleringApiParcel): Teig {
     geometry: input.geometry,
     type: input.type,
     properties: {
-      parcelId: input.id,
+      lokalid: input.id,
     },
   };
 }

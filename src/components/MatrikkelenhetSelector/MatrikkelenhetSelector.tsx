@@ -137,11 +137,7 @@ function Matrikkelenhet({ enhet }: { enhet: Matrikkelenhet }) {
           />
         ))}
       {enhet.features.map((teig) => (
-        <Teig
-          key={"teig:" + teig.properties.parcelId}
-          geometry={teig.geometry}
-          enhetId={enhet.id}
-        />
+        <Teig key={"teig:" + teig.properties.lokalid} geometry={teig.geometry} enhetId={enhet.id} />
       ))}
     </>
   );

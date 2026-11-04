@@ -6,9 +6,14 @@ import {
   validerGrensejustering,
   type MatrikkelenhetDraft,
 } from "./regulering";
+import type { Teig } from "@/types/TeigResponse";
 
-function teig(lokalid: number, bruksnummer: number | null) {
-  return { properties: { lokalid, kommunenummer: "0301", gardsnummer: 1, bruksnummer } };
+function teig(lokalid: number): Teig {
+  return {
+    properties: { lokalid },
+    geometry: { type: "Polygon", coordinates: [[[0, 0]]] },
+    type: "Parcel",
+  };
 }
 
 const enhet: MatrikkelenhetDraft = {
@@ -20,7 +25,13 @@ const enhet: MatrikkelenhetDraft = {
 
 describe("lagMatrikkelenhetDraft", () => {
   it("tar med alle teigene i matrikkelenheten", () => {
-    expect(lagMatrikkelenhetDraft({ features: [teig(10, 2), teig(11, 2)] })).toEqual({
+    expect(
+      lagMatrikkelenhetDraft({
+        id: "1",
+        features: [teig(10), teig(11)],
+        matrikkelnummer: { kommunenummer: "0301", gardsnummer: 1, bruksnummer: 2 },
+      }),
+    ).toEqual({
       kommunenummer: "0301",
       gardsnummer: 1,
       bruksnummer: 2,
@@ -29,7 +40,13 @@ describe("lagMatrikkelenhetDraft", () => {
   });
 
   it("gir null for teiger uten matrikkelnummer", () => {
-    expect(lagMatrikkelenhetDraft({ features: [teig(10, null)] })).toBeNull();
+    expect(
+      lagMatrikkelenhetDraft({
+        id: "1",
+        features: [teig(10)],
+        matrikkelnummer: { kommunenummer: "0301", gardsnummer: 1, bruksnummer: 2 },
+      }),
+    ).toBeNull();
   });
 });
 

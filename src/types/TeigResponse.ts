@@ -7,6 +7,6 @@ export type Teig = {
   };
   type: string;
   properties: {
-    parcelId: number;
+    lokalid: number;
   };
 };
