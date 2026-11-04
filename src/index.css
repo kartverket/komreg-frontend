@@ -71,6 +71,10 @@ main {
   color: var(--ds-color-neutral-text-default);
 }
 
+.matrikkelnummer-input {
+  width: 7rem;
+}
+
 .map-title {
   position: absolute;
   width: 1px;
