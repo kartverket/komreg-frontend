@@ -1,3 +1,5 @@
+import type { Matrikkelenhet } from "@/types/Matrikkelenhet";
+
 export type MatrikkelenhetDraft = {
   kommunenummer: string;
   gardsnummer: number;
@@ -33,26 +35,19 @@ export type ReguleringDetail = {
   grensejustering: GrensejusteringDraft;
 };
 
-export type ValgtMatrikkelenhet = {
-  features: {
-    properties: {
-      kommunenummer: string;
-      gardsnummer: number | null;
-      bruksnummer: number | null;
-      lokalid: number;
-    };
-  }[];
-};
-
 // Teiger uten matrikkelnummer returnerer null
-export function lagMatrikkelenhetDraft(enhet: ValgtMatrikkelenhet): MatrikkelenhetDraft | null {
-  const first = enhet.features[0]?.properties;
-  if (!first || first.gardsnummer === null || first.bruksnummer === null) return null;
+export function lagMatrikkelenhetDraft(enhet: Matrikkelenhet): MatrikkelenhetDraft | null {
+  if (
+    !enhet.matrikkelnummer ||
+    enhet.matrikkelnummer.gardsnummer === null ||
+    enhet.matrikkelnummer.bruksnummer === null
+  )
+    return null;
   return {
-    kommunenummer: first.kommunenummer,
-    gardsnummer: first.gardsnummer,
-    bruksnummer: first.bruksnummer,
-    teigIder: enhet.features.map((teig) => teig.properties.lokalid),
+    kommunenummer: enhet.matrikkelnummer?.kommunenummer,
+    gardsnummer: enhet.matrikkelnummer?.gardsnummer,
+    bruksnummer: enhet.matrikkelnummer?.bruksnummer,
+    teigIder: enhet.features.map((teig) => teig.properties.parcelId),
   };
 }
 

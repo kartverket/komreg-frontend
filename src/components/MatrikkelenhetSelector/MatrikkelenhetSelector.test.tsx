@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { TeigResponse } from "@/types/TeigResponse";
+import type { Teig } from "@/types/TeigResponse";
 import { Map as OlMap } from "@/components/Map/_Map";
 import { MatrikkelenhetSelector } from "./MatrikkelenhetSelector";
-import type { MatrikkelenhetResponse } from "@/types/Matrikkelenhet";
+import type { Matrikkelenhet } from "@/types/Matrikkelenhet";
 import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
 import { useEffect } from "react";
 import { useMap } from "@/components/Map/MapContext";
@@ -40,7 +40,7 @@ function renderSelector(isActive: boolean, onToggle = vi.fn<(isActive: boolean) 
 
 // Builds a fake API response for one spot of land ("teig"). Only fields the component
 // actually reads are filled in with real values; everything else is irrelevant filler.
-function buildTeigResponse(id: number): TeigResponse {
+function buildTeigResponse(id: number): Teig {
   return {
     type: "Feature",
     geometry: {
@@ -60,15 +60,15 @@ function buildTeigResponse(id: number): TeigResponse {
   };
 }
 
-function buildMatrikkelenhet(id: string, lokalids: number[]): MatrikkelenhetResponse {
+function buildMatrikkelenhet(id: string, lokalids: number[]): Matrikkelenhet {
   return { id, features: lokalids.map(buildTeigResponse) };
 }
 
 // Mocks both API calls made by getMatrikkelenhetAtPoint (teig at point + all teiger for the
 // matrikkelenhet). They share the same response shape, so one mock serves both.
-function stubFetchWithTeiger(teiger: TeigResponse[]) {
+function stubFetchWithTeiger(teiger: Teig[]) {
   const mockedFetch = vi
-    .fn<() => Promise<{ ok: boolean; json: () => Promise<{ features: TeigResponse[] }> }>>()
+    .fn<() => Promise<{ ok: boolean; json: () => Promise<{ features: Teig[] }> }>>()
     .mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ features: teiger }),

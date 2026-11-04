@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { TeigResponse } from "./types/TeigResponse";
+import type { Teig } from "./types/TeigResponse";
 import { createRegulering, REGULERINGER_STORAGE_KEY } from "./api/reguleringer";
 import { useMatrikkelenheter } from "./hooks/useMatrikkelenheter";
 import { App } from "./App";
@@ -11,24 +11,11 @@ function renderAt(path: string) {
   return render(<App history={createMemoryHistory({ initialEntries: [path] })} />);
 }
 
-const selectedTeig: TeigResponse = {
+const selectedTeig: Teig = {
   type: "Feature",
   geometry: { type: "Polygon", coordinates: [] },
   properties: {
-    bruksnummer: 1,
-    festenummer: 0,
-    gardsnummer: 1,
-    hovedområde: true,
-    kommunenummer: "0301",
-    lokalid: 123,
-    matrikkelnummertekst: "0301-1/1",
-    meterFraPunkt: 0,
-    nøyaktighetsklasseteig: "god",
-    objekttype: "Teig",
-    oppdateringsdato: "2026-10-21",
-    seksjonsnummer: 0,
-    teigmedflerematrikkelenheter: false,
-    uregistrertjordsameie: false,
+    parcelId: 123456,
   },
 };
 

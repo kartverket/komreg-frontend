@@ -1,6 +1,6 @@
 import type { Coordinate } from "ol/coordinate";
 
-export type TeigResponse = {
+export type Teig = {
   geometry: {
     type: "Polygon";
     coordinates: Coordinate[][];

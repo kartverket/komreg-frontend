@@ -13,8 +13,8 @@ import type { Coordinate } from "ol/coordinate";
 import { VectorLayer } from "../Map/VectorLayer";
 import { useVectorSource } from "../Map/VectorLayerContext";
 import { getMatrikkelenheterConnectedToTeigAtPoint } from "@/utils/TeigUtils";
-import type { TeigResponse } from "@/types/TeigResponse";
-import type { MatrikkelenhetResponse } from "@/types/Matrikkelenhet";
+import type { Teig } from "@/types/TeigResponse";
+import type { Matrikkelenhet } from "@/types/Matrikkelenhet";
 import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
 import type { Address } from "@/types/Address";
 import Point from "ol/geom/Point";
@@ -88,7 +88,7 @@ function MapClickInteraction() {
         return;
       }
 
-      let res: MatrikkelenhetResponse[] | undefined;
+      let res: Matrikkelenhet[] | undefined;
       try {
         res = await withWaitCursor(map, () =>
           getMatrikkelenheterConnectedToTeigAtPoint(e.coordinate),
@@ -115,7 +115,7 @@ function MapClickInteraction() {
   return null;
 }
 
-function Matrikkelenhet({ enhet }: { enhet: MatrikkelenhetResponse }) {
+function Matrikkelenhet({ enhet }: { enhet: Matrikkelenhet }) {
   return (
     <>
       {enhet.addresses
@@ -127,6 +127,7 @@ function Matrikkelenhet({ enhet }: { enhet: MatrikkelenhetResponse }) {
         .map((address) => (
           <AddressComponent
             key={
+              "add:" +
               (address.kommunenummer ?? "") +
               (address.adressekode ?? "") +
               (address.nummer ?? "") +
@@ -136,17 +137,21 @@ function Matrikkelenhet({ enhet }: { enhet: MatrikkelenhetResponse }) {
           />
         ))}
       {enhet.features.map((teig) => (
-        <Teig key={teig.properties.parcelId} geometry={teig.geometry} enhetId={enhet.id} />
+        <Teig
+          key={"teig:" + teig.properties.parcelId}
+          geometry={teig.geometry}
+          enhetId={enhet.id}
+        />
       ))}
     </>
   );
 }
 
-function Teig({ geometry, enhetId }: { geometry: TeigResponse["geometry"]; enhetId: string }) {
+function Teig({ geometry, enhetId }: { geometry: Teig["geometry"]; enhetId: string }) {
   const source = useVectorSource();
   useEffect(() => {
     const feature = new Feature({
-      geometry: new Polygon(geometry.coordinates),
+      geometry: new Polygon(geometry.coordinates).transform("EPSG:32633", "EPSG:3857"), //Regulerings api returns coordinates in EPSG:32633
       [MATRIKKELENHET_ID_KEY]: enhetId,
     });
     source.addFeature(feature);
@@ -181,7 +186,13 @@ function AddressComponent({ address }: { address: Address }) {
       });
 
     const { lon, lat } = address.representasjonspunkt!;
-    const feature = new Feature(new Point([lon, lat]));
+    const point = new Point([lon, lat]);
+
+    if (address.representasjonspunkt?.epsg !== "3857") {
+      point.transform("EPSG:" + address.representasjonspunkt?.epsg, "EPSG:3857");
+    }
+
+    const feature = new Feature(point);
     feature.setStyle(addressStyle);
     source.addFeature(feature);
     return () => {
