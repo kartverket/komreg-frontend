@@ -39,12 +39,15 @@ describe("lagMatrikkelenhetDraft", () => {
     });
   });
 
-  it("gir null for teiger uten matrikkelnummer", () => {
+  it.each([
+    ["Mnr mangler", 0],
+    ["Mnr mangler vann", 1],
+  ])("gir null for teiger uten matrikkelnummer (%s)", (_navn, bruksnummer) => {
     expect(
       lagMatrikkelenhetDraft({
-        id: "1",
+        id: "teig/10",
         features: [teig(10)],
-        matrikkelnummer: { kommunenummer: "0301", gardsnummer: 1, bruksnummer: 2 },
+        matrikkelnummer: { kommunenummer: "0301", gardsnummer: 0, bruksnummer },
       }),
     ).toBeNull();
   });

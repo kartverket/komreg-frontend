@@ -20,9 +20,11 @@ const selectedTeig: Teig = {
 };
 
 function selectMatrikkelenhet() {
-  useMatrikkelenheter
-    .getState()
-    .addMatrikkelenhet("0301/1/1", { id: "0301/1/1", features: [selectedTeig] });
+  useMatrikkelenheter.getState().addMatrikkelenhet("0301/1/1", {
+    id: "0301/1/1",
+    features: [selectedTeig],
+    matrikkelnummer: { kommunenummer: "0301", gardsnummer: 1, bruksnummer: 1 },
+  });
 }
 
 async function fillInAndSubmit() {

@@ -41,7 +41,7 @@ export type ReguleringApiResponse = {
 
 export async function getMatrikkelenheterConnectedToTeigAtPoint(
   coordinates: Coordinate,
-): Promise<Matrikkelenhet[] | undefined> {
+): Promise<Matrikkelenhet[]> {
   //convert coordinates to utm33
   const utm33Coordinates = transform(coordinates, "EPSG:3857", "EPSG:32633");
 
@@ -55,31 +55,24 @@ export async function getMatrikkelenheterConnectedToTeigAtPoint(
     throw new Error(`API call failed with status: ${res.status}`);
   }
   const cadastralUnitsConnectedToParcel = (await res.json()) as ReguleringApiResponse;
-  const matrikkelEnheterForTeig = reguleringApiToMatrikkelEnhet(cadastralUnitsConnectedToParcel);
-
-  //hvis teigen er mnr mangler eller mnr mangler vann, og ikke er koblet til noen andre matrikkelenheter kan vi legge til bare den ene teigen
-  if (
-    matrikkelEnheterForTeig.length == 1 &&
-    matrikkelEnheterForTeig[0]?.matrikkelnummer?.gardsnummer == 0 &&
-    (matrikkelEnheterForTeig[0]?.matrikkelnummer?.bruksnummer == 0 ||
-      matrikkelEnheterForTeig[0]?.matrikkelnummer?.bruksnummer == 1)
-  ) {
-    //TODO: return teig alone
-    console.log("Teig er mnr mangler eller mnr mangler vann");
-    return;
-  }
-  return matrikkelEnheterForTeig;
+  return reguleringApiToMatrikkelEnhet(cadastralUnitsConnectedToParcel);
 }
 
 function reguleringApiToMatrikkelEnhet(input: ReguleringApiResponse): Matrikkelenhet[] {
   const teiger = input.features.filter((feature) => feature.featureType === "Parcel");
   const addresser = input.features.filter((feature) => feature.featureType === "Address");
   const matrikkelenheter = new Map<string, Matrikkelenhet>();
-  function buildCadNumber(cadastralNumber: {
-    municipalityNumber: string;
-    landNumber: number;
-    titleNumber: number;
-  }) {
+  // Gnr 0 means the teig has no matrikkelnummer (bnr 0: "Mnr mangler", bnr 1: "Mnr mangler vann").
+  // Every such teig in a kommune shares the same cadastral number, so they get an id per teig.
+  function buildCadNumber(
+    cadastralNumber: {
+      municipalityNumber: string;
+      landNumber: number;
+      titleNumber: number;
+    },
+    teigId: number,
+  ) {
+    if (cadastralNumber.landNumber === 0) return `teig/${teigId}`;
     return `${cadastralNumber.municipalityNumber}/${cadastralNumber.landNumber}/${cadastralNumber.titleNumber}`;
   }
 
@@ -88,13 +81,14 @@ function reguleringApiToMatrikkelEnhet(input: ReguleringApiResponse): Matrikkele
   );
 
   for (const teig of flat) {
-    if (matrikkelenheter.has(buildCadNumber(teig.cadastralNumber))) {
-      const enhet = matrikkelenheter.get(buildCadNumber(teig.cadastralNumber));
-      enhet?.features.push(reguleringApiParcelToTeigResponse(teig.teig));
+    const id = buildCadNumber(teig.cadastralNumber, teig.teig.id);
+    const enhet = matrikkelenheter.get(id);
+    if (enhet) {
+      enhet.features.push(reguleringApiParcelToTeigResponse(teig.teig));
       continue;
     }
-    matrikkelenheter.set(buildCadNumber(teig.cadastralNumber), {
-      id: buildCadNumber(teig.cadastralNumber),
+    matrikkelenheter.set(id, {
+      id,
       features: [reguleringApiParcelToTeigResponse(teig.teig)],
       matrikkelnummer: {
         kommunenummer: teig.cadastralNumber.municipalityNumber,

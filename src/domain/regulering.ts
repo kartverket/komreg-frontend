@@ -35,18 +35,14 @@ export type ReguleringDetail = {
   grensejustering: GrensejusteringDraft;
 };
 
-// Teiger uten matrikkelnummer returnerer null
+// Teiger uten matrikkelnummer (gnr 0: "Mnr mangler" og "Mnr mangler vann") returnerer null
 export function lagMatrikkelenhetDraft(enhet: Matrikkelenhet): MatrikkelenhetDraft | null {
-  if (
-    !enhet.matrikkelnummer ||
-    enhet.matrikkelnummer.gardsnummer === null ||
-    enhet.matrikkelnummer.bruksnummer === null
-  )
-    return null;
+  const matrikkelnummer = enhet.matrikkelnummer;
+  if (!matrikkelnummer || matrikkelnummer.gardsnummer === 0) return null;
   return {
-    kommunenummer: enhet.matrikkelnummer?.kommunenummer,
-    gardsnummer: enhet.matrikkelnummer?.gardsnummer,
-    bruksnummer: enhet.matrikkelnummer?.bruksnummer,
+    kommunenummer: matrikkelnummer.kommunenummer,
+    gardsnummer: matrikkelnummer.gardsnummer,
+    bruksnummer: matrikkelnummer.bruksnummer,
     teigIder: enhet.features.map((teig) => teig.properties.lokalid),
   };
 }

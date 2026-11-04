@@ -70,6 +70,36 @@ describe("TeigUtils", () => {
       expect(Number(url.searchParams.get("easting"))).toBeCloseTo(expectedEasting, 2);
       expect(Number(url.searchParams.get("northing"))).toBeCloseTo(expectedNorthing, 2);
     });
+    it("gives each teig without matrikkelnummer (gnr 0) its own matrikkelenhet", async () => {
+      const parcel = (
+        id: number,
+        titleNumber: number,
+      ): ReguleringApiResponse["features"][number] => ({
+        type: "Feature",
+        id,
+        featureType: "Parcel",
+        geometry: { type: "Polygon", coordinates: [[[0, 0]]] },
+        properties: {
+          cadastralNumbers: [{ municipalityNumber: "1525", landNumber: 0, titleNumber }],
+          coveringParcel: false,
+        },
+      });
+      const mockResponse: ReguleringApiResponse = {
+        type: "FeatureCollection",
+        crs: { type: "name", properties: { name: "urn:ogc:def:crs:EPSG::32633" } },
+        features: [parcel(1, 0), parcel(2, 0), parcel(3, 1)],
+      };
+      vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(Response.json(mockResponse)));
+
+      const enheter = await getMatrikkelenheterConnectedToTeigAtPoint(webmercatorCoordinate);
+
+      expect(enheter.map((enhet) => enhet.id)).toEqual(["teig/1", "teig/2", "teig/3"]);
+      expect(enheter[2]?.matrikkelnummer).toEqual({
+        kommunenummer: "1525",
+        gardsnummer: 0,
+        bruksnummer: 1,
+      });
+    });
     it("Throws if the fetch returns !Ok", async () => {
       const notOkResponse = new Response(null, { status: 500 });
 
