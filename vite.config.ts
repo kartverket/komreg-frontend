@@ -43,4 +43,12 @@ export default defineConfig({
   // React Compiler through the Rolldown babel preset. @vitejs/plugin-react 6 silently ignores
   // the older `react({ babel: { plugins } })` form, so this is the wiring that actually runs.
   plugins: lazyPlugins(() => [react(), babel({ presets: [reactCompilerPreset()] })]),
+  server: {
+    proxy: {
+      "/api/regulering": {
+        target: "http://localhost:8082",
+        rewrite: (p) => p.replace(/^\/api\/regulering/, ""),
+      },
+    },
+  },
 });

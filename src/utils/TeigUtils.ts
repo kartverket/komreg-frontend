@@ -46,7 +46,7 @@ export async function getMatrikkelenheterConnectedToTeigAtPoint(
   const utm33Coordinates = transform(coordinates, "EPSG:3857", "EPSG:32633");
 
   //TODO: Route the calls through caddy
-  const url = new URL(`http://localhost:8082/point/cadestral_unit`);
+  const url = new URL(`/api/regulering/point/cadestral_unit`, window.location.origin);
   url.searchParams.append("easting", String(utm33Coordinates[0]));
   url.searchParams.append("northing", String(utm33Coordinates[1]));
 
