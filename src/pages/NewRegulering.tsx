@@ -128,12 +128,14 @@ export function NewRegulering() {
       ) : (
         <form className="regulering-form" onSubmit={(event) => void submit(event)}>
           <Textfield
+            className="regulering-felt"
             label="Navn"
             value={navn}
             onChange={(event) => setNavn(event.target.value)}
             required
           />
           <Textfield
+            className="regulering-felt"
             label="Ikrafttredelsesdato"
             type="date"
             value={dato}
@@ -141,6 +143,7 @@ export function NewRegulering() {
             required
           />
           <Textfield
+            className="regulering-felt"
             label="Fra kommune"
             value={fraKommune}
             onChange={(event) => setFraKommune(event.target.value)}
@@ -148,6 +151,7 @@ export function NewRegulering() {
             required
           />
           <Textfield
+            className="regulering-felt"
             label="Til kommune"
             value={tilKommune}
             onChange={(event) => setTilKommune(event.target.value)}
