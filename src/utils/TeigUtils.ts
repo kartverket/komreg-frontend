@@ -211,7 +211,7 @@ async function getAllAddressesForMatrikkelenhet(
   gardsnummer: number,
   bruksnummer: number,
 ): Promise<Address[]> {
-  const url = `https://ws.geonorge.no/adresser/v1/sok?kommunenummer=${kommunenummer}&gardsnummer=${gardsnummer}&bruksnummer=${bruksnummer}&utkoordsys=3857&objtype=Vegadresse`;
+  const url = `https://ws.geonorge.no/adresser/v1/sok?kommunenummer=${kommunenummer}&gardsnummer=${gardsnummer}&bruksnummer=${bruksnummer}&utkoordsys=3857&objtype=Vegadresse&treffPerSide=1000`;
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Kartverket API returned HTTP ${res.status}`);
