@@ -66,6 +66,25 @@ export function useVegvalg(valgteVegadresser: VegadresseDraft[]) {
     if (veg) hentEksisterende(tilKommunenummer, veg);
   }
 
+  // Med egen veg velges vegen for adressen alene. Uten følger den vegen for alle igjen.
+  function brukEgenVeg(nokkel: string, egen: boolean) {
+    oppdater(vegvalg.tilKommunenummer, (forrige) => {
+      const egneVeger = new Map(forrige.egneVeger);
+      if (egen) egneVeger.set(nokkel, null);
+      else egneVeger.delete(nokkel);
+      return { ...forrige, egneVeger };
+    });
+  }
+
+  function velgEgenVeg(nokkel: string, veg: Veg | undefined) {
+    const { tilKommunenummer } = vegvalg;
+    oppdater(tilKommunenummer, (forrige) => ({
+      ...forrige,
+      egneVeger: new Map(forrige.egneVeger).set(nokkel, veg ?? null),
+    }));
+    if (veg) hentEksisterende(tilKommunenummer, veg);
+  }
+
   function endreHusnummer(nokkel: string, husnummer: string) {
     oppdater(vegvalg.tilKommunenummer, (forrige) => ({
       ...forrige,
@@ -109,9 +128,12 @@ export function useVegvalg(valgteVegadresser: VegadresseDraft[]) {
     grupper: grupperPaVeg(vegadresser),
     tilKommunenummer: vegvalg.tilKommunenummer,
     valgtVeg: (nokkel: string) => vegvalg.veger.get(nokkel),
+    harEgenVeg: (nokkel: string) => vegvalg.egneVeger.has(nokkel),
     husnummer: (nokkel: string) => vegvalg.husnumre.get(nokkel) ?? "",
     status,
     velgVeg,
+    brukEgenVeg,
+    velgEgenVeg,
     endreHusnummer,
     byttTilKommune,
   };
