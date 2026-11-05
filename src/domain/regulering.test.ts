@@ -4,6 +4,7 @@ import {
   formatMatrikkelnummer,
   formatNyttMatrikkelnummer,
   lagMatrikkelenhetDraft,
+  lagTeigDraft,
   matrikkelnumreITilKommune,
   medHeleGardsnummer,
   medNyeMatrikkelnumre,
@@ -34,6 +35,18 @@ describe("lagMatrikkelenhetDraft", () => {
 
   it("gir null for teiger uten matrikkelnummer", () => {
     expect(lagMatrikkelenhetDraft({ features: [teig(10, null)] })).toBeNull();
+  });
+});
+
+describe("lagTeigDraft", () => {
+  it("gir teigene uten matrikkelnummer", () => {
+    expect(lagTeigDraft({ features: [teig(10, null)] })).toEqual([
+      { kommunenummer: "0301", teigId: 10 },
+    ]);
+  });
+
+  it("gir ingen teiger for en matrikkelenhet med matrikkelnummer", () => {
+    expect(lagTeigDraft({ features: [teig(10, 2), teig(11, 2)] })).toEqual([]);
   });
 });
 
@@ -93,10 +106,25 @@ describe("formatNyttMatrikkelnummer", () => {
 });
 
 describe("validerGrensejustering", () => {
-  const gyldig = { fraKommunenummer: "0301", tilKommunenummer: "0302", matrikkelenheter: [enhet] };
+  const gyldig = {
+    fraKommunenummer: "0301",
+    tilKommunenummer: "0302",
+    matrikkelenheter: [enhet],
+    teiger: [],
+  };
 
   it("godtar en gyldig grensejustering", () => {
     expect(validerGrensejustering(gyldig)).toBeNull();
+  });
+
+  it("godtar teiger uten matrikkelnummer i fra kommune", () => {
+    const teiger = [{ kommunenummer: "0301", teigId: 10 }];
+    expect(validerGrensejustering({ ...gyldig, matrikkelenheter: [], teiger })).toBeNull();
+  });
+
+  it("avviser teiger uten matrikkelnummer utenfor fra kommune", () => {
+    const teiger = [{ kommunenummer: "0303", teigId: 10 }];
+    expect(validerGrensejustering({ ...gyldig, teiger })).toMatch("teiger uten matrikkelnummer");
   });
 
   it("avviser kommunenummer som ikke er fire siffer", () => {

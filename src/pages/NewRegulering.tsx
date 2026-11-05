@@ -15,6 +15,7 @@ import {
   formatMatrikkelnummer,
   gardsnummerNokkel,
   lagMatrikkelenhetDraft,
+  lagTeigDraft,
   matrikkelnumreITilKommune,
   medHeleGardsnummer,
   medNyeMatrikkelnumre,
@@ -29,9 +30,10 @@ export function NewRegulering() {
   const navigate = useNavigate();
   const valgte = useMatrikkelenheter((state) => state.matrikkelenheter);
   const clearMatrikkelenheter = useMatrikkelenheter((state) => state.clearMatrikkelenheter);
-  const drafts = Array.from(valgte.values(), lagMatrikkelenhetDraft);
-  const utenMatrikkelnummer = drafts.filter((draft) => draft === null).length;
-  const valgteEnheter = drafts.filter((draft) => draft !== null);
+  const valgteEnheter = Array.from(valgte.values(), lagMatrikkelenhetDraft).filter(
+    (draft) => draft !== null,
+  );
+  const teiger = Array.from(valgte.values(), lagTeigDraft).flat();
   const gardsnumre = [...new Set(valgteEnheter.map(gardsnummerNokkel))];
   const [heleGardsnummer, setHeleGardsnummer] = useState<ReadonlySet<string>>(new Set());
   const [nyeNumre, setNyeNumre] = useState<ReadonlyMap<string, NyttMatrikkelnummerInput>>(
@@ -43,7 +45,9 @@ export function NewRegulering() {
   );
   const [navn, setNavn] = useState("");
   const [dato, setDato] = useState("");
-  const [fraKommune, setFraKommune] = useState(valgteEnheter[0]?.kommunenummer ?? "");
+  const [fraKommune, setFraKommune] = useState(
+    valgteEnheter[0]?.kommunenummer ?? teiger[0]?.kommunenummer ?? "",
+  );
   const [tilKommune, setTilKommune] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -70,14 +74,11 @@ export function NewRegulering() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (utenMatrikkelnummer) {
-      setError("Teiger uten matrikkelnummer kan ikke flyttes ennå. Fjern dem i kartet.");
-      return;
-    }
     const grensejustering: GrensejusteringDraft = {
       fraKommunenummer: fraKommune.trim(),
       tilKommunenummer: tilKommune.trim(),
       matrikkelenheter,
+      teiger,
     };
     const valideringsfeil = validerGrensejustering(grensejustering);
     if (valideringsfeil) {
@@ -219,10 +220,33 @@ export function NewRegulering() {
                 </Table.Body>
               </Table>
             </div>
-            {utenMatrikkelnummer > 0 && (
-              <Paragraph>{utenMatrikkelnummer} teig(er) uten matrikkelnummer er valgt.</Paragraph>
-            )}
           </section>
+          {teiger.length > 0 && (
+            <section>
+              <Heading level={2} data-size="xs">
+                Teiger uten matrikkelnummer ({teiger.length})
+              </Heading>
+              <Paragraph data-size="sm">
+                Teigene beholder teig-ID-en og er fortsatt uten matrikkelnummer i til kommune.
+              </Paragraph>
+              <div className="regulering-table-wrapper">
+                <Table data-size="sm" zebra>
+                  <Table.Head>
+                    <Table.Row>
+                      <Table.HeaderCell>Teig-ID</Table.HeaderCell>
+                    </Table.Row>
+                  </Table.Head>
+                  <Table.Body>
+                    {teiger.map((teig) => (
+                      <Table.Row key={teig.teigId}>
+                        <Table.Cell>{teig.teigId}</Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table>
+              </div>
+            </section>
+          )}
           {error && (
             <Paragraph className="form-error" role="alert">
               {error}

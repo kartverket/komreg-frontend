@@ -16,6 +16,7 @@ const request: OpprettReguleringRequest = {
         teigIder: [10, 11],
       },
     ],
+    teiger: [{ kommunenummer: "1525", teigId: 12 }],
   },
 };
 
