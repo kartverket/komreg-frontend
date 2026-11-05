@@ -23,8 +23,12 @@ import {
   type GrensejusteringDraft,
   type NyttMatrikkelnummerInput,
 } from "@/domain/regulering";
+import { finnOpptattVegadresse, lagVegadresseDrafts, nyeAdressekoder } from "@/domain/vegadresse";
 import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
+import { useVegvalg } from "@/hooks/useVegvalg";
+import { finnEksisterendeVegadresser } from "@/utils/AdresseUtils";
 import { finnEksisterendeMatrikkelnumre } from "@/utils/TeigUtils";
+import { FlyttVegadresser } from "./FlyttVegadresser";
 
 export function NewRegulering() {
   const navigate = useNavigate();
@@ -34,6 +38,10 @@ export function NewRegulering() {
     (draft) => draft !== null,
   );
   const teiger = Array.from(valgte.values(), lagTeigDraft).flat();
+  const vegvalg = useVegvalg(
+    lagVegadresseDrafts(Array.from(valgte.values(), (enhet) => enhet.addresses ?? []).flat()),
+  );
+  const { vegadresser } = vegvalg;
   const gardsnumre = [...new Set(valgteEnheter.map(gardsnummerNokkel))];
   const [heleGardsnummer, setHeleGardsnummer] = useState<ReadonlySet<string>>(new Set());
   const [nyeNumre, setNyeNumre] = useState<ReadonlyMap<string, NyttMatrikkelnummerInput>>(
@@ -72,6 +80,11 @@ export function NewRegulering() {
     });
   }
 
+  function endreTilKommune(kommunenummer: string) {
+    setTilKommune(kommunenummer);
+    vegvalg.byttTilKommune(kommunenummer.trim());
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     const grensejustering: GrensejusteringDraft = {
@@ -79,7 +92,7 @@ export function NewRegulering() {
       tilKommunenummer: tilKommune.trim(),
       matrikkelenheter,
       teiger,
-      vegadresser: [],
+      vegadresser,
     };
     const valideringsfeil = validerGrensejustering(grensejustering);
     if (valideringsfeil) {
@@ -105,6 +118,26 @@ export function NewRegulering() {
     );
     if (opptatt) {
       setError(opptatt);
+      setSaving(false);
+      return;
+    }
+
+    const eksisterendeVegadresser = await finnEksisterendeVegadresser(
+      grensejustering.tilKommunenummer,
+      nyeAdressekoder(vegadresser),
+    ).catch((error) => console.log(error));
+    if (!eksisterendeVegadresser) {
+      setError("Kunne ikke sjekke vegadressene mot adresseregisteret. Prøv igjen.");
+      setSaving(false);
+      return;
+    }
+    const opptattVegadresse = finnOpptattVegadresse(
+      vegadresser,
+      grensejustering.tilKommunenummer,
+      eksisterendeVegadresser,
+    );
+    if (opptattVegadresse) {
+      setError(opptattVegadresse);
       setSaving(false);
       return;
     }
@@ -155,7 +188,7 @@ export function NewRegulering() {
             className="regulering-felt"
             label="Til kommune"
             value={tilKommune}
-            onChange={(event) => setTilKommune(event.target.value)}
+            onChange={(event) => endreTilKommune(event.target.value)}
             inputMode="numeric"
             required
           />
@@ -252,6 +285,7 @@ export function NewRegulering() {
               </div>
             </section>
           )}
+          {vegadresser.length > 0 && <FlyttVegadresser vegvalg={vegvalg} />}
           {error && (
             <Paragraph className="form-error" role="alert">
               {error}
