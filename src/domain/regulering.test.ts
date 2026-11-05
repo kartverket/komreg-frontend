@@ -141,6 +141,7 @@ describe("validerGrensejustering", () => {
     tilKommunenummer: "0302",
     matrikkelenheter: [enhet],
     teiger: [],
+    vegadresser: [],
   };
 
   it("godtar en gyldig grensejustering", () => {
@@ -155,6 +156,17 @@ describe("validerGrensejustering", () => {
   it("avviser teiger uten matrikkelnummer utenfor fra kommune", () => {
     const teiger = [{ kommunenummer: "0303", teigId: 10 }];
     expect(validerGrensejustering({ ...gyldig, teiger })).toMatch("teiger uten matrikkelnummer");
+  });
+
+  it("validerer vegadressene", () => {
+    const vegadresser = [
+      {
+        kommunenummer: "0301",
+        veg: { adressekode: 1234, adressenavn: "Storgata" },
+        husnummer: { nummer: 5, bokstav: "" },
+      },
+    ];
+    expect(validerGrensejustering({ ...gyldig, vegadresser })).toMatch("Velg veg");
   });
 
   it("avviser kommunenummer som ikke er fire siffer", () => {

@@ -222,6 +222,7 @@ describe("App", () => {
         tilKommunenummer: "0302",
         matrikkelenheter: [],
         teiger: [],
+        vegadresser: [],
       },
     });
 

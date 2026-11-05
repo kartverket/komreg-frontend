@@ -1,4 +1,5 @@
 import type { Matrikkelenhet } from "@/types/Matrikkelenhet";
+import { validerVegadresser, type VegadresseDraft } from "./vegadresse";
 
 export type MatrikkelenhetDraft = {
   kommunenummer: string;
@@ -29,6 +30,7 @@ export type GrensejusteringDraft = {
   tilKommunenummer: string;
   matrikkelenheter: MatrikkelenhetDraft[];
   teiger: TeigDraft[];
+  vegadresser: VegadresseDraft[];
 };
 
 export type OpprettReguleringRequest = {
@@ -211,7 +213,8 @@ export function finnOpptattMatrikkelnummer(
 const KOMMUNENUMMER = /^\d{4}$/;
 
 export function validerGrensejustering(grensejustering: GrensejusteringDraft): string | null {
-  const { fraKommunenummer, tilKommunenummer, matrikkelenheter, teiger } = grensejustering;
+  const { fraKommunenummer, tilKommunenummer, matrikkelenheter, teiger, vegadresser } =
+    grensejustering;
   if (!KOMMUNENUMMER.test(fraKommunenummer))
     return "Fra kommune må være et firesifret kommunenummer";
   if (!KOMMUNENUMMER.test(tilKommunenummer))
@@ -231,5 +234,5 @@ export function validerGrensejustering(grensejustering: GrensejusteringDraft): s
   }
   const kollisjon = forsteKollisjonNyeMatrikkelnummer(matrikkelenheter);
   if (kollisjon) return `Flere matrikkelenheter får matrikkelnummer ${kollisjon} i til kommune`;
-  return null;
+  return validerVegadresser(vegadresser, fraKommunenummer);
 }
