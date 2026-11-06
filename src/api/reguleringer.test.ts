@@ -17,6 +17,15 @@ const request: OpprettReguleringRequest = {
       },
     ],
     teiger: [{ kommunenummer: "1525", teigId: 12 }],
+    vegadresser: [
+      {
+        kommunenummer: "1525",
+        veg: { adressekode: 1234, adressenavn: "Storgata" },
+        husnummer: { nummer: 5, bokstav: "A" },
+        nyVeg: { adressekode: 5678, adressenavn: "Kirkevegen" },
+        nyttHusnummer: { nummer: 7, bokstav: "" },
+      },
+    ],
   },
 };
 

@@ -79,6 +79,7 @@ export function NewRegulering() {
       tilKommunenummer: tilKommune.trim(),
       matrikkelenheter,
       teiger,
+      vegadresser: [],
     };
     const valideringsfeil = validerGrensejustering(grensejustering);
     if (valideringsfeil) {

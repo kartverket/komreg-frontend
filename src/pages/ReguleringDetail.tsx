@@ -8,6 +8,7 @@ import {
   formatNyttMatrikkelnummer,
   type ReguleringDetail as Detail,
 } from "@/domain/regulering";
+import { formatNyVegadresse, formatVegadresse, vegadresseNokkel } from "@/domain/vegadresse";
 
 export function ReguleringDetail() {
   const { reguleringId } = useParams({ strict: false });
@@ -93,6 +94,33 @@ export function ReguleringDetail() {
                     {regulering.grensejustering.teiger.map((teig) => (
                       <Table.Row key={teig.teigId}>
                         <Table.Cell>{teig.teigId}</Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table>
+              </div>
+            </>
+          )}
+          {regulering.grensejustering.vegadresser.length > 0 && (
+            <>
+              <Heading level={2} data-size="sm">
+                Vegadresser
+              </Heading>
+              <div className="regulering-table-wrapper">
+                <Table data-size="sm" zebra>
+                  <Table.Head>
+                    <Table.Row>
+                      <Table.HeaderCell>Adresse</Table.HeaderCell>
+                      <Table.HeaderCell>Ny adresse</Table.HeaderCell>
+                      <Table.HeaderCell>Ny adressekode</Table.HeaderCell>
+                    </Table.Row>
+                  </Table.Head>
+                  <Table.Body>
+                    {regulering.grensejustering.vegadresser.map((adresse) => (
+                      <Table.Row key={vegadresseNokkel(adresse)}>
+                        <Table.Cell>{formatVegadresse(adresse)}</Table.Cell>
+                        <Table.Cell>{formatNyVegadresse(adresse)}</Table.Cell>
+                        <Table.Cell>{adresse.nyVeg?.adressekode}</Table.Cell>
                       </Table.Row>
                     ))}
                   </Table.Body>
