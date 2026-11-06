@@ -33,6 +33,10 @@ handle /health {
 	respond "ok" 200
 }
 
+handle_path /api/regulering/* {
+	reverse_proxy {$REGULERING_API_URL}
+}
+
 handle {
 	root * /srv
 	try_files {path} /index.html

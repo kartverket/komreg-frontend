@@ -1,3 +1,5 @@
+import type { Matrikkelenhet } from "@/types/Matrikkelenhet";
+
 export type MatrikkelenhetDraft = {
   kommunenummer: string;
   gardsnummer: number;
@@ -50,25 +52,14 @@ export type ReguleringDetail = {
   grensejustering: GrensejusteringDraft;
 };
 
-export type ValgtMatrikkelenhet = {
-  features: {
-    properties: {
-      kommunenummer: string;
-      gardsnummer: number | null;
-      bruksnummer: number | null;
-      lokalid: number;
-    };
-  }[];
-};
-
-// Teiger uten matrikkelnummer returnerer null
-export function lagMatrikkelenhetDraft(enhet: ValgtMatrikkelenhet): MatrikkelenhetDraft | null {
-  const first = enhet.features[0]?.properties;
-  if (!first || first.gardsnummer === null || first.bruksnummer === null) return null;
+// Teiger uten matrikkelnummer (gnr 0: "Mnr mangler" og "Mnr mangler vann") returnerer null
+export function lagMatrikkelenhetDraft(enhet: Matrikkelenhet): MatrikkelenhetDraft | null {
+  const matrikkelnummer = enhet.matrikkelnummer;
+  if (!matrikkelnummer || matrikkelnummer.gardsnummer === 0) return null;
   return {
-    kommunenummer: first.kommunenummer,
-    gardsnummer: first.gardsnummer,
-    bruksnummer: first.bruksnummer,
+    kommunenummer: matrikkelnummer.kommunenummer,
+    gardsnummer: matrikkelnummer.gardsnummer,
+    bruksnummer: matrikkelnummer.bruksnummer,
     teigIder: enhet.features.map((teig) => teig.properties.lokalid),
   };
 }

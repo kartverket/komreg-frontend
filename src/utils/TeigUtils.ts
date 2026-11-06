@@ -1,37 +1,69 @@
-import { type Geometry } from "ol/geom";
-import type { TeigResponse } from "@/types/TeigResponse";
+import { Polygon, type Geometry } from "ol/geom";
 import WFS from "ol/format/WFS";
 import { and, equalTo, within } from "ol/format/filter";
 import type Filter from "ol/format/filter/Filter";
 import type { Feature } from "ol";
-import Polygon from "ol/geom/Polygon";
 import type { Coordinate } from "ol/coordinate";
-import { fetchGrunnkretsAtPoint } from "@/utils/GrunnkretsUtils";
-import type { MatrikkelenhetResponse } from "@/types/Matrikkelenhet";
+import type { Matrikkelenhet } from "@/types/Matrikkelenhet";
+import { transform } from "ol/proj";
+import type { Teig } from "@/types/TeigResponse";
 import type { Address } from "@/types/Address";
 import type { Matrikkelnummer } from "@/domain/regulering";
 
-export async function getAllTeigerInGrunnkretsAtPoint(
-  coordinate: Coordinate,
-): Promise<TeigResponse[]> {
-  try {
-    const grunnkrets = await fetchGrunnkretsAtPoint(coordinate);
-    const grunnkretsGeometry = grunnkrets.getGeometry();
+type ReguleringApiAddress = {
+  type: "Feature";
+  id: number;
+  featureType: "Address";
+  geometry: { type: "Point"; coordinates: Coordinate };
+  properties: {
+    municipalityNumber: string;
+    addressCode: number;
+    addressName: string;
+    addressNumber: number;
+    addressNumberExtension: string | null;
+  };
+};
 
-    if (!grunnkretsGeometry) {
-      console.error("Grunnkrets has no geometry", grunnkrets.getId());
-      return [];
-    }
+type ReguleringApiParcel = {
+  type: "Feature";
+  id: number;
+  featureType: "Parcel";
+  geometry: { type: "Polygon"; coordinates: Coordinate[][] };
+  properties: {
+    cadastralNumbers: {
+      municipalityNumber: string;
+      landNumber: number;
+      titleNumber: number;
+    }[];
+    coveringParcel: boolean;
+  };
+};
 
-    const teigerFraGrunnkrets = await fetchTeigerInGeometry(grunnkretsGeometry);
-    return teigerFraGrunnkrets;
-  } catch (error) {
-    console.error("Failed to get teiger in grunnkrets at point", error);
-    return [];
+export type ReguleringApiResponse = {
+  type: "FeatureCollection";
+  features: (ReguleringApiAddress | ReguleringApiParcel)[];
+  crs: { type: "name"; properties: { name: string } };
+};
+
+export async function getMatrikkelenheterConnectedToTeigAtPoint(
+  coordinates: Coordinate,
+): Promise<Matrikkelenhet[]> {
+  //convert coordinates to utm33
+  const utm33Coordinates = transform(coordinates, "EPSG:3857", "EPSG:32633");
+
+  const url = new URL(`/api/regulering/point/cadestral_unit`, window.location.origin);
+  url.searchParams.append("easting", String(utm33Coordinates[0]));
+  url.searchParams.append("northing", String(utm33Coordinates[1]));
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`API call failed with status: ${res.status}`);
   }
-}
 
-export async function fetchTeigerInGeometry(geometry: Geometry): Promise<TeigResponse[]> {
+  const cadastralUnitsConnectedToParcel = (await res.json()) as ReguleringApiResponse;
+  return reguleringApiToMatrikkelEnhet(cadastralUnitsConnectedToParcel);
+}
+export async function fetchTeigerInGeometry(geometry: Geometry): Promise<Teig[]> {
   const features = await fetchTeigFeatures(within("representasjonspunkt", geometry, "EPSG:3857"));
   return features.map(teigFeatureToTeigResponse).filter((teig) => teig !== undefined);
 }
@@ -47,7 +79,6 @@ async function fetchTeigFeatures(filter: Filter, count?: number): Promise<Featur
     filter,
     count,
   });
-
   const res = await fetch("https://wfs.geonorge.no/skwms1/wfs.matrikkelen-eiendomskart-teig", {
     method: "POST",
     headers: { "Content-Type": "application/xml" },
@@ -63,6 +94,32 @@ async function fetchTeigFeatures(filter: Filter, count?: number): Promise<Featur
     throw new Error("WFS response is empty");
   }
   return wfsFormat.readFeatures(text);
+}
+
+export function teigFeatureToTeigResponse(feature: Feature): Teig | undefined {
+  const geometry = feature.getGeometry();
+  if (!(geometry instanceof Polygon)) {
+    console.error("Teig has unexpected geometry type", feature.getId());
+    return undefined;
+  }
+
+  // gml:id has the form "teig.<teigId>" – teigId doubles as the lokalid.
+  const lokalid = Number(feature.getId()?.toString().split(".").at(1));
+  if (Number.isNaN(lokalid)) {
+    console.error("Could not parse teig lokalid from", feature.getId());
+    return undefined;
+  }
+
+  return {
+    type: "Feature",
+    geometry: {
+      type: "Polygon",
+      coordinates: geometry.getCoordinates(),
+    },
+    properties: {
+      lokalid,
+    },
+  };
 }
 
 // Eiendoms-API-et (og Teig-WFS-en) kjenner bare matrikkelenheter som har teig. Et nummer som
@@ -118,123 +175,89 @@ export async function finnEksisterendeMatrikkelnumre(
   return eksisterende;
 }
 
-function parseBoolean(value: unknown): boolean {
-  return value === true || value === "true";
+function reguleringApiToMatrikkelEnhet(input: ReguleringApiResponse): Matrikkelenhet[] {
+  const teiger = input.features.filter((feature) => feature.featureType === "Parcel");
+  const addresser = input.features.filter((feature) => feature.featureType === "Address");
+  const matrikkelenheter = new Map<string, Matrikkelenhet>();
+  // Gnr 0 means the teig has no matrikkelnummer (bnr 0: "Mnr mangler", bnr 1: "Mnr mangler vann").
+  // Every such teig in a kommune shares the same cadastral number, so they get an id per teig.
+  function buildCadNumber(
+    cadastralNumber: {
+      municipalityNumber: string;
+      landNumber: number;
+      titleNumber: number;
+    },
+    teigId: number,
+  ) {
+    if (cadastralNumber.landNumber === 0) return `teig/${teigId}`;
+    return `${cadastralNumber.municipalityNumber}/${cadastralNumber.landNumber}/${cadastralNumber.titleNumber}`;
+  }
+
+  const flat = teiger.flatMap((teig) =>
+    teig.properties.cadastralNumbers.map((cadastralNumber) => ({ cadastralNumber, teig })),
+  );
+
+  for (const teig of flat) {
+    const id = buildCadNumber(teig.cadastralNumber, teig.teig.id);
+    const enhet = matrikkelenheter.get(id);
+    if (enhet) {
+      enhet.features.push(reguleringApiParcelToTeigResponse(teig.teig));
+      continue;
+    }
+    matrikkelenheter.set(id, {
+      id,
+      features: [reguleringApiParcelToTeigResponse(teig.teig)],
+      matrikkelnummer: {
+        kommunenummer: teig.cadastralNumber.municipalityNumber,
+        gardsnummer: teig.cadastralNumber.landNumber,
+        bruksnummer: teig.cadastralNumber.titleNumber,
+      },
+    });
+  }
+
+  const matrikkelenheterArray = Array.from(matrikkelenheter.values());
+
+  //add the addresses to the first matrikkelenhet, does not matter
+  if (matrikkelenheterArray.length > 0 && matrikkelenheterArray[0] != null) {
+    matrikkelenheterArray[0].addresses = addresser.map((address): Address => {
+      const [lon, lat] = address.geometry.coordinates;
+      return {
+        adressenavn: address.properties.addressName,
+        adressekode: address.properties.addressCode,
+        nummer: address.properties.addressNumber,
+        bokstav: address.properties.addressNumberExtension ?? undefined,
+        adressetekst:
+          `${address.properties.addressName} ${address.properties.addressNumber} ${address.properties.addressNumberExtension ?? ""}`.trim(),
+        kommunenummer: address.properties.municipalityNumber,
+        representasjonspunkt:
+          lat !== undefined && lon !== undefined
+            ? {
+                epsg: "32633",
+                lat: lat,
+                lon: lon,
+              }
+            : undefined,
+      };
+    });
+  }
+
+  //populate connectedToOtherUnits for each matrikkelenhet
+  //All the matrikkelenheter returned here should be connected to each other
+  for (const enhet of matrikkelenheterArray) {
+    enhet.connectedToOtherUnits = matrikkelenheterArray
+      .filter((otherEnhet) => otherEnhet.id !== enhet.id)
+      .map((otherEnhet) => otherEnhet.id);
+  }
+
+  return matrikkelenheterArray;
 }
 
-export function teigFeatureToTeigResponse(feature: Feature): TeigResponse | undefined {
-  const geometry = feature.getGeometry();
-  if (!(geometry instanceof Polygon)) {
-    console.error("Teig has unexpected geometry type", feature.getId());
-    return undefined;
-  }
-
-  // gml:id has the form "teig.<teigId>" – teigId doubles as the lokalid.
-  const lokalid = Number(feature.getId()?.toString().split(".").at(1));
-  if (Number.isNaN(lokalid)) {
-    console.error("Could not parse teig lokalid from", feature.getId());
-    return undefined;
-  }
-
-  const props = feature.getProperties();
-
+function reguleringApiParcelToTeigResponse(input: ReguleringApiParcel): Teig {
   return {
-    type: "Feature",
-    geometry: {
-      type: "Polygon",
-      coordinates: geometry.getCoordinates(),
-    },
+    geometry: input.geometry,
+    type: input.type,
     properties: {
-      bruksnummer: Number(props.matrikkelenhet?.Matrikkelenhet?.bruksnummer) || 0,
-      festenummer: Number(props.festenummer) || 0,
-      gardsnummer: Number(props.matrikkelenhet?.Matrikkelenhet?.gardsnummer) || 0,
-      hovedområde: true,
-      kommunenummer: String(props.kommunenummer ?? ""),
-      lokalid,
-      matrikkelnummertekst: String(props.matrikkelnummerTekst ?? ""),
-      meterFraPunkt: 0,
-      nøyaktighetsklasseteig: String(props.noyaktighetsklasseTeig ?? ""),
-      objekttype: "Teig",
-      oppdateringsdato: String(props.oppdateringsdato ?? ""),
-      seksjonsnummer: props.seksjonsnummer !== undefined ? Number(props.seksjonsnummer) : null,
-      teigmedflerematrikkelenheter: parseBoolean(props.teigMedFlereMatrikkelenheter),
-      uregistrertjordsameie: parseBoolean(props.uregistrertJordsameie),
+      lokalid: input.id,
     },
   };
-}
-
-export async function fetchTeigAtPoint(coordinates: Coordinate): Promise<TeigResponse | undefined> {
-  const url = `https://api.kartverket.no/eiendom/v1/punkt/omrader?ost=${coordinates[0]}&nord=${coordinates[1]}&koordsys=3857&utkoordsys=3857`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Kartverket API returned HTTP ${res.status}`);
-  }
-  const data = (await res.json()) as { crs: unknown; features: TeigResponse[] };
-  if (!data.features || data.features.length === 0) {
-    return undefined;
-  }
-  return data.features.at(0);
-}
-
-export async function getMatrikkelenhetAtPoint(
-  coordinates: Coordinate,
-): Promise<MatrikkelenhetResponse | undefined> {
-  const teig = await fetchTeigAtPoint(coordinates);
-  if (!teig) {
-    return undefined;
-  }
-  const kommunnenummer = teig.properties.kommunenummer;
-  const gardsnummer = teig.properties.gardsnummer;
-  const bruksnummer = teig.properties.bruksnummer;
-
-  // Teiger without a matrikkelnummer ("Mnr mangler") can't be looked up, so they form their own enhet.
-  if (gardsnummer === null || bruksnummer === null) {
-    return { id: `teig/${teig.properties.lokalid}`, features: [teig] };
-  }
-
-  const [addresses, matrikkelenhet] = await Promise.all([
-    getAllAddressesForMatrikkelenhet(kommunnenummer, gardsnummer, bruksnummer),
-    getAllTeigerForMatrikkelenhet(kommunnenummer, gardsnummer, bruksnummer),
-  ]);
-
-  if (!matrikkelenhet.features || matrikkelenhet.features.length === 0) return undefined;
-
-  return {
-    id: kommunnenummer + "/" + gardsnummer + "/" + bruksnummer,
-    addresses,
-    ...matrikkelenhet,
-  };
-}
-
-async function getAllAddressesForMatrikkelenhet(
-  kommunenummer: string,
-  gardsnummer: number,
-  bruksnummer: number,
-): Promise<Address[]> {
-  const url = `https://ws.geonorge.no/adresser/v1/sok?kommunenummer=${kommunenummer}&gardsnummer=${gardsnummer}&bruksnummer=${bruksnummer}&utkoordsys=3857&objtype=Vegadresse`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Kartverket API returned HTTP ${res.status}`);
-  }
-  const data = await res.json();
-  if (!data.adresser) {
-    return [];
-  }
-  return data.adresser as Address[];
-}
-
-function getAllTeigerForMatrikkelenhet(
-  kommunenummer: string,
-  gardsnummer: number,
-  bruksnummer: number,
-): Promise<Omit<MatrikkelenhetResponse, "id">> {
-  const url = `https://api.kartverket.no/eiendom/v1/geokoding?kommunenummer=${kommunenummer}&gardsnummer=${gardsnummer}&bruksnummer=${bruksnummer}&omrade=true&utkoordsys=3857`;
-  return fetch(url)
-    .then((res) => {
-      if (!res.ok) {
-        throw new Error(`Kartverket API returned HTTP ${res.status}`);
-      }
-      return res.json();
-    })
-    .then((data: Omit<MatrikkelenhetResponse, "id">) => data);
 }

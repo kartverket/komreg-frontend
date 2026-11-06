@@ -1,166 +1,165 @@
-import { describe, expect, it, vi } from "vite-plus/test";
-import { Feature } from "ol";
-import Polygon from "ol/geom/Polygon";
-import { matrikkelnummerFinnes, teigFeatureToTeigResponse } from "@/utils/TeigUtils";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import {
+  getMatrikkelenheterConnectedToTeigAtPoint,
+  type ReguleringApiResponse,
+} from "@/utils/TeigUtils";
+import { matrikkelnummerFinnes } from "@/utils/TeigUtils";
 
 type FetchMock = (input: string, init?: RequestInit) => Promise<Partial<Response>>;
 
-describe("matrikkelnummerFinnes", () => {
-  const nummer = { gardsnummer: 1, bruksnummer: 2 };
-
-  it("slår opp gårds- og bruksnummer direkte i eiendoms-API-et", async () => {
-    const fetchMock = vi.fn<FetchMock>().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ features: [{}] }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    await expect(matrikkelnummerFinnes("0302", nummer)).resolves.toBe(true);
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/geokoding?kommunenummer=0302&gardsnummer=1&bruksnummer=2"),
-    );
-  });
-
-  it("svarer nei når eiendoms-API-et ikke finner nummeret", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ features: [] }) }),
-    );
-
-    await expect(matrikkelnummerFinnes("0302", nummer)).resolves.toBe(false);
-  });
-
-  it("feiler når eiendoms-API-et svarer med feil", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
-
-    await expect(matrikkelnummerFinnes("0302", nummer)).rejects.toThrow("500");
-  });
-
-  it("slår opp et helt gårdsnummer i Teig-WFS-en og ber om ett treff", async () => {
-    const fetchMock = vi.fn<FetchMock>().mockResolvedValue({
-      ok: true,
-      text: () =>
-        Promise.resolve(
-          '<wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"></wfs:FeatureCollection>',
-        ),
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    const helGard = { gardsnummer: 1, bruksnummer: null };
-    await expect(matrikkelnummerFinnes("0302", helGard)).resolves.toBe(false);
-    const body = fetchMock.mock.calls[0]?.[1]?.body;
-    expect(body).toEqual(expect.stringContaining('count="1"'));
-    expect(body).toEqual(expect.stringContaining("app:gardsnummer"));
-  });
-});
-
 describe("TeigUtils", () => {
-  describe("teigFeatureToTeigResponse", () => {
-    it("should convert a Teig feature to a Teig response correctly", () => {
-      const coordinates = [
-        [
-          [10, 60],
-          [10, 61],
-          [11, 61],
-          [10, 60],
+  describe("matrikkelnummerFinnes", () => {
+    const nummer = { gardsnummer: 1, bruksnummer: 2 };
+
+    it("slår opp gårds- og bruksnummer direkte i eiendoms-API-et", async () => {
+      const fetchMock = vi.fn<FetchMock>().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ features: [{}] }),
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      await expect(matrikkelnummerFinnes("0302", nummer)).resolves.toBe(true);
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("/geokoding?kommunenummer=0302&gardsnummer=1&bruksnummer=2"),
+      );
+    });
+
+    it("svarer nei når eiendoms-API-et ikke finner nummeret", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ features: [] }) }),
+      );
+
+      await expect(matrikkelnummerFinnes("0302", nummer)).resolves.toBe(false);
+    });
+
+    it("feiler når eiendoms-API-et svarer med feil", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+
+      await expect(matrikkelnummerFinnes("0302", nummer)).rejects.toThrow("500");
+    });
+
+    it("slår opp et helt gårdsnummer i Teig-WFS-en og ber om ett treff", async () => {
+      const fetchMock = vi.fn<FetchMock>().mockResolvedValue({
+        ok: true,
+        text: () =>
+          Promise.resolve(
+            '<wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"></wfs:FeatureCollection>',
+          ),
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const helGard = { gardsnummer: 1, bruksnummer: null };
+      await expect(matrikkelnummerFinnes("0302", helGard)).resolves.toBe(false);
+      const body = fetchMock.mock.calls[0]?.[1]?.body;
+      expect(body).toEqual(expect.stringContaining('count="1"'));
+      expect(body).toEqual(expect.stringContaining("app:gardsnummer"));
+    });
+  });
+  describe("getMatrikkelenheterConnectedToTeigAtPoint", () => {
+    const webmercatorCoordinate = [910000, 8670000];
+    beforeEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    });
+    it("sends the clicked point to the backend as UTM33 easting/northing", async () => {
+      const [expectedEasting, expectedNorthing] = [133540.29463627184, 6803311.703038221];
+      const mockResponse: ReguleringApiResponse = {
+        crs: {
+          type: "name",
+          properties: {
+            name: "urn:ogc:def:crs:EPSG::25833",
+          },
+        },
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [89000, 6900000],
+            },
+            properties: {
+              municipalityNumber: "1525",
+              addressCode: 1093,
+              addressName: "Adressesen",
+              addressNumber: 1,
+              addressNumberExtension: null,
+            },
+            id: 1,
+            featureType: "Address",
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [[[89104.5496155555, 6934257.132968337]]],
+            },
+            properties: {
+              cadastralNumbers: [
+                {
+                  municipalityNumber: "1525",
+                  landNumber: 2222,
+                  titleNumber: 2222,
+                },
+              ],
+              coveringParcel: false,
+            },
+            id: 22,
+            featureType: "Parcel",
+          },
         ],
-      ];
-      const feature = new Feature({
-        geometry: new Polygon(coordinates),
-        identTeig: {
-          IdentTeig: {
-            teigId: "100000001",
-            navnerom: "https://data.geonorge.no/sosi/matrikkel/eiendomskart_teig",
-            versjonId: "1",
-          },
-        },
-        datafangstdato: "2000-01-01T00:00:00",
-        oppdateringsdato: "2024-01-01T00:00:00",
-        kommunenummer: "0000",
-        kommunenavn: "TESTKOMMUNE",
-        matrikkelenhet: {
-          Matrikkelenhet: {
-            kommunenummer: "0000",
-            gardsnummer: "1",
-            bruksnummer: "1",
-            bruksnavn: "TESTGÅRDEN",
-            matrikkelenhetstype: "Grunneiendom",
-            punktfeste: "false",
-            avklartEiere: "false",
-            avklartAndeler: "false",
-            harAvtaleGrensePunktfeste: "false",
-            harAvtaleStedbundenRettighet: "false",
-            harGrunnforurensing: "false",
-            harKulturminne: "false",
-            harRegistrertGrunnerverv: "false",
-            harRegistrertJordskifteKrevd: "false",
-            matrikkelenhetId: "100000002",
-            uuidMatrikkelenhet: "a198fc62-7142-4f43-a41c-3826b791e043",
-          },
-        },
-        matrikkelnummerTekst: "1/1",
-        teigMedFlereMatrikkelenheter: "false",
-        tvist: "false",
-        uregistrertJordsameie: "false",
-        avklartEiere: "false",
-        teigareal: {
-          Areal: {
-            lagretBeregnetAreal: "1000.0",
-          },
-        },
-        noyaktighetsklasseTeig: "Gult",
-        uuidTeig: "f653c2e4-c8a4-48e6-a13e-2ddb962d4e4a",
-      });
-      feature.setId("teig.100000000");
+        type: "FeatureCollection",
+      };
 
-      const result = teigFeatureToTeigResponse(feature);
+      const mockedFetch = vi.fn<typeof fetch>().mockResolvedValue(Response.json(mockResponse));
+      vi.stubGlobal("fetch", mockedFetch);
 
-      expect(result).toEqual({
+      await getMatrikkelenheterConnectedToTeigAtPoint(webmercatorCoordinate);
+
+      expect(mockedFetch).toHaveBeenCalledTimes(1);
+      const url = mockedFetch.mock.calls[0]?.[0] as URL;
+      expect(Number(url.searchParams.get("easting"))).toBeCloseTo(expectedEasting, 2);
+      expect(Number(url.searchParams.get("northing"))).toBeCloseTo(expectedNorthing, 2);
+    });
+    it("gives each teig without matrikkelnummer (gnr 0) its own matrikkelenhet", async () => {
+      const parcel = (
+        id: number,
+        titleNumber: number,
+      ): ReguleringApiResponse["features"][number] => ({
         type: "Feature",
-        geometry: {
-          type: "Polygon",
-          coordinates,
-        },
+        id,
+        featureType: "Parcel",
+        geometry: { type: "Polygon", coordinates: [[[0, 0]]] },
         properties: {
-          bruksnummer: 1,
-          festenummer: 0,
-          gardsnummer: 1,
-          hovedområde: true,
-          kommunenummer: "0000",
-          lokalid: 100000000,
-          matrikkelnummertekst: "1/1",
-          meterFraPunkt: 0,
-          nøyaktighetsklasseteig: "Gult",
-          objekttype: "Teig",
-          oppdateringsdato: "2024-01-01T00:00:00",
-          seksjonsnummer: null,
-          teigmedflerematrikkelenheter: false,
-          uregistrertjordsameie: false,
+          cadastralNumbers: [{ municipalityNumber: "1525", landNumber: 0, titleNumber }],
+          coveringParcel: false,
         },
       });
-    });
+      const mockResponse: ReguleringApiResponse = {
+        type: "FeatureCollection",
+        crs: { type: "name", properties: { name: "urn:ogc:def:crs:EPSG::32633" } },
+        features: [parcel(1, 0), parcel(2, 0), parcel(3, 1)],
+      };
+      vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(Response.json(mockResponse)));
 
-    it("should return undefined when the geometry is not a Polygon", () => {
-      const feature = new Feature({ geometry: undefined });
-      feature.setId("teig.123");
+      const enheter = await getMatrikkelenheterConnectedToTeigAtPoint(webmercatorCoordinate);
 
-      expect(teigFeatureToTeigResponse(feature)).toBeUndefined();
-    });
-
-    it("should return undefined when the feature id does not contain a parsable lokalid", () => {
-      const feature = new Feature({
-        geometry: new Polygon([
-          [
-            [10, 60],
-            [10, 61],
-            [11, 61],
-            [10, 60],
-          ],
-        ]),
+      expect(enheter.map((enhet) => enhet.id)).toEqual(["teig/1", "teig/2", "teig/3"]);
+      expect(enheter[2]?.matrikkelnummer).toEqual({
+        kommunenummer: "1525",
+        gardsnummer: 0,
+        bruksnummer: 1,
       });
-      feature.setId("teig.not-a-number");
+    });
+    it("Throws if the fetch returns !Ok", async () => {
+      const notOkResponse = new Response(null, { status: 500 });
 
-      expect(teigFeatureToTeigResponse(feature)).toBeUndefined();
+      const mockedFetch = vi.fn<typeof fetch>().mockResolvedValue(notOkResponse);
+      vi.stubGlobal("fetch", mockedFetch);
+
+      await expect(
+        getMatrikkelenheterConnectedToTeigAtPoint(webmercatorCoordinate),
+      ).rejects.toThrow(/500/);
     });
   });
 });
