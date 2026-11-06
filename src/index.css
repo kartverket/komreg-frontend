@@ -50,6 +50,10 @@ main {
 .regulering-form {
   display: grid;
   gap: var(--ds-size-4);
+}
+
+/* Tabellene får hele bredden, men enkle tekstfelt blir ikke lengre enn de trenger. */
+.regulering-felt {
   max-width: 36rem;
 }
 
