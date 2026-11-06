@@ -64,13 +64,13 @@ export function lagMatrikkelenhetDraft(enhet: Matrikkelenhet): MatrikkelenhetDra
   };
 }
 
-export function lagTeigDraft(enhet: ValgtMatrikkelenhet): TeigDraft[] {
-  return enhet.features
-    .filter(({ properties }) => properties.gardsnummer === null || properties.bruksnummer === null)
-    .map(({ properties }) => ({
-      kommunenummer: properties.kommunenummer,
-      teigId: properties.lokalid,
-    }));
+export function lagTeigDraft(enhet: Matrikkelenhet): TeigDraft[] {
+  const matrikkelnummer = enhet.matrikkelnummer;
+  if (matrikkelnummer?.gardsnummer !== 0) return [];
+  return enhet.features.map((teig) => ({
+    kommunenummer: matrikkelnummer.kommunenummer,
+    teigId: teig.properties.lokalid,
+  }));
 }
 
 export function gardsnummerNokkel({ kommunenummer, gardsnummer }: MatrikkelenhetDraft): string {

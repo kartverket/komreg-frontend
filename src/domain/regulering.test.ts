@@ -60,13 +60,23 @@ describe("lagMatrikkelenhetDraft", () => {
 
 describe("lagTeigDraft", () => {
   it("gir teigene uten matrikkelnummer", () => {
-    expect(lagTeigDraft({ features: [teig(10, null)] })).toEqual([
-      { kommunenummer: "0301", teigId: 10 },
-    ]);
+    expect(
+      lagTeigDraft({
+        id: "teig/10",
+        features: [teig(10)],
+        matrikkelnummer: { kommunenummer: "0301", gardsnummer: 0, bruksnummer: 0 },
+      }),
+    ).toEqual([{ kommunenummer: "0301", teigId: 10 }]);
   });
 
   it("gir ingen teiger for en matrikkelenhet med matrikkelnummer", () => {
-    expect(lagTeigDraft({ features: [teig(10, 2), teig(11, 2)] })).toEqual([]);
+    expect(
+      lagTeigDraft({
+        id: "1",
+        features: [teig(10), teig(11)],
+        matrikkelnummer: { kommunenummer: "0301", gardsnummer: 1, bruksnummer: 2 },
+      }),
+    ).toEqual([]);
   });
 });
 
