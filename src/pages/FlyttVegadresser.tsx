@@ -1,4 +1,4 @@
-import { Heading, Input, Paragraph, Table } from "@kv-designsystem/react";
+import { Button, Heading, Input, Paragraph, Table } from "@kv-designsystem/react";
 import {
   formatHusnummer,
   formatNyVegadresse,
@@ -24,7 +24,8 @@ export function FlyttVegadresser({ vegvalg }: { vegvalg: Vegvalgstate }) {
       </Heading>
       <Paragraph data-size="sm">
         Velg vegen i til kommune som adressene skal kobles til. Finnes det en veg med samme navn, er
-        den valgt. Er adressen opptatt, fyller du inn et nytt husnummer, for eksempel 12B.
+        den valgt. Vegen gjelder alle adressene på vegen, men du kan velge en annen veg for én
+        adresse. Er adressen opptatt, fyller du inn et nytt husnummer, for eksempel 12B.
       </Paragraph>
       {vegvalg.grupper.map((gruppe) => {
         const vegnavn = formatVeg(gruppe.veg);
@@ -45,6 +46,7 @@ export function FlyttVegadresser({ vegvalg }: { vegvalg: Vegvalgstate }) {
                 <Table.Head>
                   <Table.Row>
                     <Table.HeaderCell>Adresse</Table.HeaderCell>
+                    <Table.HeaderCell>Veg i til kommune</Table.HeaderCell>
                     <Table.HeaderCell>Ny adresse</Table.HeaderCell>
                     <Table.HeaderCell>Nytt husnummer</Table.HeaderCell>
                     <Table.HeaderCell>Status</Table.HeaderCell>
@@ -58,6 +60,38 @@ export function FlyttVegadresser({ vegvalg }: { vegvalg: Vegvalgstate }) {
                     return (
                       <Table.Row key={nokkel}>
                         <Table.Cell>{tekst}</Table.Cell>
+                        <Table.Cell>
+                          {vegvalg.harEgenVeg(nokkel) ? (
+                            <div className="egen-veg">
+                              <VegVelger
+                                key={vegvalg.tilKommunenummer}
+                                tilKommunenummer={vegvalg.tilKommunenummer}
+                                label={`Veg i til kommune for ${tekst}`}
+                                valgt={adresse.nyVeg}
+                                onVelg={(veg) => vegvalg.velgEgenVeg(nokkel, veg)}
+                              />
+                              <Button
+                                type="button"
+                                variant="tertiary"
+                                data-size="sm"
+                                aria-label={`Bruk felles veg for ${tekst}`}
+                                onClick={() => vegvalg.brukEgenVeg(nokkel, false)}
+                              >
+                                Bruk felles veg
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="tertiary"
+                              data-size="sm"
+                              aria-label={`Velg annen veg for ${tekst}`}
+                              onClick={() => vegvalg.brukEgenVeg(nokkel, true)}
+                            >
+                              Velg annen veg
+                            </Button>
+                          )}
+                        </Table.Cell>
                         <Table.Cell>{formatNyVegadresse(adresse)}</Table.Cell>
                         <Table.Cell>
                           <Input

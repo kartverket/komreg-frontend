@@ -283,6 +283,26 @@ describe("App", () => {
     expect(await screen.findByRole("row", { name: "Storgata 5 Kirkevegen 5 9999" })).toBeVisible();
   });
 
+  it("lets one vegadresse leave the veg for all, and requires a veg for it", async () => {
+    stubVegITilKommune("Storgata", [1]);
+    selectMatrikkelenhetMedVegadresse();
+    renderAt("/reguleringer/ny");
+
+    await fillIn();
+    expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Velg annen veg for Storgata 5" }));
+    expect(
+      screen.getByRole("combobox", { name: "Veg i til kommune for Storgata 5" }),
+    ).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Velg veg i til kommune for Storgata 5",
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Bruk felles veg for Storgata 5" }));
+    expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
+  });
+
   it("requires a veg in til kommune when none has the same name", async () => {
     stubVegITilKommune("Kirkevegen", [1]);
     selectMatrikkelenhetMedVegadresse();

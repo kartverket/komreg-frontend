@@ -90,6 +90,17 @@ main {
   max-width: 36rem;
 }
 
+/* Forslagslista er like bred som feltet, så feltet må være bredt nok til å lese vegnavnene. */
+.egen-veg .ds-suggestion {
+  min-width: 18rem;
+}
+
+.egen-veg {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-size-2);
+}
+
 .map-title {
   position: absolute;
   width: 1px;
