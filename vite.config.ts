@@ -30,6 +30,11 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  server: {
+    proxy: {
+      "/api": "http://localhost:8082",
+    },
+  },
   // The designsystem alone puts the entry chunk at ~530 kB (Digdir doesn't tree-shake), so the
   // 500 kB default warned on every build and got ignored. Set just above today's size, so the
   // warning means something again: raise it on purpose, with the reason, when it fires.

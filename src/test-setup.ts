@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vite-plus/test";
+import { disconnectReguleringer } from "@/api/reguleringer";
 
 // jsdom has no ResizeObserver, which OpenLayers uses to follow the map element's size.
 if (!("ResizeObserver" in globalThis)) {
@@ -17,6 +18,8 @@ window.scrollTo = () => {};
 
 afterEach(() => {
   cleanup();
+  // Reguleringene holdes i modulen; uten dette lekker strømmen og cachen mellom testene.
+  disconnectReguleringer();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });

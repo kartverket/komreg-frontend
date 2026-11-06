@@ -20,10 +20,13 @@ For å teste frontend med Caddy lokalt, kjør fra repoet:
 ./dev.sh    # http://localhost:8080
 ```
 
-## Midlertidig lagring av reguleringer
+## Lagring av reguleringer
 
-Reguleringsutkast lagres foreløpig i nettleserens `localStorage`. De synkroniseres ikke mellom
-nettlesere eller brukere, og må ikke regnes som varig lagret i backend.
+Reguleringer lagres i backend, som er fasit. Klienten holder bare en cache i minnet, og serveren må
+være tilgjengelig for å lagre. All kommunikasjon går gjennom `src/api/reguleringer.ts`:
 
-All lagring går gjennom `src/api/reguleringer.ts`. Når backend kan lagre reguleringer, er det bare
-den filen som skal byttes ut.
+- `GET /api/reguleringer/stream` (SSE): `snapshot` med alle reguleringer ved hver (re)tilkobling,
+  deretter `upsert` med hele reguleringen per endring.
+- `POST /api/reguleringer`: oppretter, og svarer med hele reguleringen inkludert `id`.
+
+Testene bruker en falsk backend i `src/api/fakeReguleringBackend.ts`.

@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { TeigResponse } from "./types/TeigResponse";
-import { createRegulering, REGULERINGER_STORAGE_KEY } from "./api/reguleringer";
+import { createRegulering } from "./api/reguleringer";
+import { stubReguleringBackend } from "./api/fakeReguleringBackend";
 import { useMatrikkelenheter } from "./hooks/useMatrikkelenheter";
 import { App } from "./App";
 
@@ -39,7 +40,10 @@ function selectMatrikkelenhet() {
 }
 
 // Svarer som eiendoms-API-ets geokoding: treff for matrikkelnumrene som finnes i til kommune.
-// Teig-WFS-en (hele gårdsnumre) får alltid et tomt svar.
+// Teig-WFS-en (hele gårdsnumre) får alltid et tomt svar. Kall til reguleringsbackenden går til
+// `backend`, så fetchMock bare ser matrikkeloppslagene.
+let backend: ReturnType<typeof stubReguleringBackend>;
+
 function stubEksisterendeMatrikkelnumre(...eksisterende: string[]) {
   const tomWfs =
     '<wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"></wfs:FeatureCollection>';
@@ -56,7 +60,7 @@ function stubEksisterendeMatrikkelnumre(...eksisterende: string[]) {
         text: () => Promise.resolve(tomWfs),
       });
     });
-  vi.stubGlobal("fetch", fetchMock);
+  backend = stubReguleringBackend(fetchMock);
   return fetchMock;
 }
 
@@ -70,7 +74,6 @@ async function fillInAndSubmit() {
 describe("App", () => {
   beforeEach(() => {
     useMatrikkelenheter.getState().clearMatrikkelenheter();
-    localStorage.removeItem(REGULERINGER_STORAGE_KEY);
     stubEksisterendeMatrikkelnumre();
   });
 
@@ -181,14 +184,14 @@ describe("App", () => {
   });
 
   it("does not create the regulation when the matrikkel check fails", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Nettverksfeil")));
+    backend = stubReguleringBackend(vi.fn().mockRejectedValue(new Error("Nettverksfeil")));
     selectMatrikkelenhet();
     renderAt("/reguleringer/ny");
 
     await fillInAndSubmit();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Kunne ikke sjekke");
-    expect(localStorage.getItem(REGULERINGER_STORAGE_KEY)).toBeNull();
+    expect(backend.reguleringer).toEqual([]);
   });
 
   it("moves a whole gårdsnummer when chosen", async () => {
@@ -231,14 +234,12 @@ describe("App", () => {
 
   it("keeps selected parcels when creation fails", async () => {
     selectMatrikkelenhet();
-    vi.spyOn(Storage.prototype, "setItem").mockImplementationOnce(() => {
-      throw new Error("Lagring feilet");
-    });
+    backend.lagringFeiler = true;
     renderAt("/reguleringer/ny");
 
     await fillInAndSubmit();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("kunne ikke lagres lokalt");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Reguleringen kunne ikke lagres");
     expect(useMatrikkelenheter.getState().matrikkelenheter.has("0301/1/1")).toBe(true);
   });
 

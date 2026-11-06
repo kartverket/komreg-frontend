@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import type { OpprettReguleringRequest } from "@/domain/regulering";
+import { stubReguleringBackend } from "./fakeReguleringBackend";
 import { createRegulering, getRegulering, listReguleringer } from "./reguleringer";
 
 const request: OpprettReguleringRequest = {
@@ -19,9 +20,11 @@ const request: OpprettReguleringRequest = {
   },
 };
 
-describe("midlertidig reguleringslager", () => {
+describe("reguleringer fra backend", () => {
+  let backend: ReturnType<typeof stubReguleringBackend>;
+
   beforeEach(() => {
-    localStorage.clear();
+    backend = stubReguleringBackend();
   });
 
   it("oppretter og henter en regulering", async () => {
@@ -30,10 +33,13 @@ describe("midlertidig reguleringslager", () => {
     await expect(getRegulering(id)).resolves.toEqual({ id, ...request });
   });
 
-  it("gir fortløpende ID-er", async () => {
-    await createRegulering(request);
+  it("har den opprettede reguleringen med en gang, uten å vente på strømmen", async () => {
+    await listReguleringer();
+    backend.upsertsUteblir = true;
 
-    await expect(createRegulering(request)).resolves.toBe(2);
+    const id = await createRegulering(request);
+
+    await expect(getRegulering(id)).resolves.toEqual({ id, ...request });
   });
 
   it("lager sammendrag for reguleringslisten", async () => {
@@ -50,7 +56,29 @@ describe("midlertidig reguleringslager", () => {
     ]);
   });
 
+  it("får med reguleringer som andre oppretter mens strømmen er åpen", async () => {
+    await expect(listReguleringer()).resolves.toEqual([]);
+
+    const fraAndre = backend.opprett({ ...request, navn: "Fra en annen bruker" });
+
+    await expect(getRegulering(fraAndre.id)).resolves.toEqual(fraAndre);
+  });
+
   it("feiler tydelig når reguleringen ikke finnes", async () => {
     await expect(getRegulering(404)).rejects.toThrow("Fant ikke reguleringen");
+  });
+
+  it("feiler når lagringen feiler", async () => {
+    backend.lagringFeiler = true;
+
+    await expect(createRegulering(request)).rejects.toThrow("Reguleringen kunne ikke lagres");
+  });
+
+  it("feiler når strømmen ikke kommer opp, og prøver på nytt ved neste kall", async () => {
+    backend.strommenFeiler = true;
+    await expect(listReguleringer()).rejects.toThrow("Kunne ikke hente reguleringer");
+
+    backend.strommenFeiler = false;
+    await expect(listReguleringer()).resolves.toEqual([]);
   });
 });
