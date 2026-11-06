@@ -28,19 +28,15 @@ function selectMatrikkelenhet() {
 }
 
 function selectTeigUtenMatrikkelnummer() {
-  const teig: TeigResponse = {
+  const teig: Teig = {
     ...selectedTeig,
-    properties: {
-      ...selectedTeig.properties,
-      gardsnummer: null,
-      bruksnummer: null,
-      lokalid: 456,
-      matrikkelnummertekst: "Mnr mangler",
-    },
+    properties: { lokalid: 456 },
   };
-  useMatrikkelenheter
-    .getState()
-    .addMatrikkelenhet("teig/456", { id: "teig/456", features: [teig] });
+  useMatrikkelenheter.getState().addMatrikkelenhet("teig/456", {
+    id: "teig/456",
+    features: [teig],
+    matrikkelnummer: { kommunenummer: "0301", gardsnummer: 0, bruksnummer: 0 },
+  });
 }
 
 // Svarer som eiendoms-API-ets geokoding: treff for matrikkelnumrene som finnes i til kommune.
