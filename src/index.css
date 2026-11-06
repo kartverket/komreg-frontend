@@ -75,8 +75,19 @@ main {
   color: var(--ds-color-neutral-text-default);
 }
 
-.matrikkelnummer-input {
+.matrikkelnummer-input,
+.husnummer-input {
   width: 7rem;
+}
+
+.veg-gruppe {
+  display: grid;
+  gap: var(--ds-size-2);
+  margin-block-end: var(--ds-size-4);
+}
+
+.veg-gruppe > .ds-suggestion {
+  max-width: 36rem;
 }
 
 .map-title {
