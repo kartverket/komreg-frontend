@@ -34,7 +34,9 @@ handle /health {
 }
 
 handle_path /api/regulering/* {
-	reverse_proxy {$REGULERING_API_URL}
+	reverse_proxy {$REGULERING_API_URL} {
+		header_up Host {upstream_hostport}
+	}
 }
 
 handle {
