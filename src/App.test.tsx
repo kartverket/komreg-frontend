@@ -27,6 +27,15 @@ function selectMatrikkelenhet() {
   });
 }
 
+function selectMatrikkelenhetMedVegadresse() {
+  useMatrikkelenheter.getState().addMatrikkelenhet("0301/1/1", {
+    id: "0301/1/1",
+    features: [selectedTeig],
+    matrikkelnummer: { kommunenummer: "0301", gardsnummer: 1, bruksnummer: 1 },
+    addresses: [{ kommunenummer: "0301", adressekode: 1234, nummer: 5, adressenavn: "Storgata" }],
+  });
+}
+
 function selectTeigUtenMatrikkelnummer() {
   const teig: Teig = {
     ...selectedTeig,
@@ -61,10 +70,35 @@ function stubEksisterendeMatrikkelnumre(...eksisterende: string[]) {
   return fetchMock;
 }
 
-async function fillInAndSubmit() {
+// Adresse-API-et har én veg i til kommune, med adressekode 9999 og de gitte husnumrene. Søk på
+// veg og sjekken av husnumre får begge dette svaret. Eiendoms-API-et får ingen treff.
+function stubVegITilKommune(adressenavn: string, husnumre: number[]) {
+  const adresser = husnumre.map((nummer) => ({
+    adressekode: 9999,
+    adressenavn,
+    nummer,
+    bokstav: "",
+  }));
+  const fetchMock = vi
+    .fn<(url: string) => Promise<Pick<Response, "ok" | "status" | "json">>>()
+    .mockImplementation((url) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(url.includes("/adresser/") ? { adresser } : { features: [] }),
+      }),
+    );
+  vi.stubGlobal("fetch", fetchMock);
+}
+
+async function fillIn() {
   await userEvent.type(await screen.findByRole("textbox", { name: "Navn" }), "Ny regulering");
   await userEvent.type(screen.getByLabelText("Ikrafttredelsesdato"), "2026-10-21");
   await userEvent.type(screen.getByRole("textbox", { name: "Til kommune" }), "0302");
+}
+
+async function fillInAndSubmit() {
+  await fillIn();
   await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
 }
 
@@ -201,6 +235,86 @@ describe("App", () => {
     expect(await screen.findByRole("row", { name: "456" })).toBeVisible();
   });
 
+  it("chooses the veg with the same name in til kommune", async () => {
+    stubVegITilKommune("Storgata", [1]);
+    selectMatrikkelenhetMedVegadresse();
+    renderAt("/reguleringer/ny");
+
+    await fillIn();
+    expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
+
+    expect(await screen.findByRole("row", { name: "Storgata 5 Storgata 5 9999" })).toBeVisible();
+  });
+
+  it("shows a taken husnummer right away and accepts a new one", async () => {
+    stubVegITilKommune("Storgata", [5]);
+    selectMatrikkelenhetMedVegadresse();
+    renderAt("/reguleringer/ny");
+
+    await fillIn();
+    expect(await screen.findByRole("cell", { name: "Opptatt" })).toBeVisible();
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Nytt husnummer for Storgata 5" }),
+      "5b",
+    );
+    expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
+
+    expect(await screen.findByRole("row", { name: "Storgata 5 Storgata 5B 9999" })).toBeVisible();
+  });
+
+  it("lets the user search for and choose another veg", async () => {
+    stubVegITilKommune("Kirkevegen", [1]);
+    selectMatrikkelenhetMedVegadresse();
+    renderAt("/reguleringer/ny");
+
+    await fillIn();
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "Veg i til kommune for Storgata (1234)" }),
+      "Kirke",
+    );
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Kirkevegen (9999)", hidden: true }),
+    );
+    expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
+
+    expect(await screen.findByRole("row", { name: "Storgata 5 Kirkevegen 5 9999" })).toBeVisible();
+  });
+
+  it("lets one vegadresse leave the veg for all, and requires a veg for it", async () => {
+    stubVegITilKommune("Storgata", [1]);
+    selectMatrikkelenhetMedVegadresse();
+    renderAt("/reguleringer/ny");
+
+    await fillIn();
+    expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Velg annen veg for Storgata 5" }));
+    expect(
+      screen.getByRole("combobox", { name: "Veg i til kommune for Storgata 5" }),
+    ).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Velg veg i til kommune for Storgata 5",
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Bruk felles veg for Storgata 5" }));
+    expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
+  });
+
+  it("requires a veg in til kommune when none has the same name", async () => {
+    stubVegITilKommune("Kirkevegen", [1]);
+    selectMatrikkelenhetMedVegadresse();
+    renderAt("/reguleringer/ny");
+
+    await fillInAndSubmit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Velg veg i til kommune for Storgata 5",
+    );
+  });
+
   it("moves a whole gårdsnummer when chosen", async () => {
     selectMatrikkelenhet();
     renderAt("/reguleringer/ny");
@@ -222,6 +336,7 @@ describe("App", () => {
         tilKommunenummer: "0302",
         matrikkelenheter: [],
         teiger: [],
+        vegadresser: [],
       },
     });
 
