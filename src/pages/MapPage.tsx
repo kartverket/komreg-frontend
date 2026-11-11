@@ -7,12 +7,13 @@ import { Map as OlMap } from "@/components/Map/_Map";
 import { MapSearch } from "@/components/Toolbar/MapSearch";
 import { MapDrawing } from "@/components/Map/Drawing";
 import { MatrikkelenhetSelector } from "@/components/MatrikkelenhetSelector/MatrikkelenhetSelector";
+import { GrunnkretsSelector } from "@/components/GrunnkretsSelector/GrunnkretsSelector";
 import { useState } from "react";
 import { MapLayerSelect } from "@/components/MapLayerSelect/MapLayerSelect";
 import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
 
 export function MapPage() {
-  const [activeTool, setActiveTool] = useState<"drawing" | "parcel" | null>(null);
+  const [activeTool, setActiveTool] = useState<"drawing" | "parcel" | "krets" | null>(null);
   const selectedCount = useMatrikkelenheter((state) => state.matrikkelenheter.size);
   const norgeskartTileUrl =
     "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png";
@@ -32,6 +33,10 @@ export function MapPage() {
           <MatrikkelenhetSelector
             isActive={activeTool === "parcel"}
             onToggle={(isActive) => setActiveTool(isActive ? "parcel" : null)}
+          />
+          <GrunnkretsSelector
+            isActive={activeTool === "krets"}
+            onToggle={(isActive) => setActiveTool(isActive ? "krets" : null)}
           />
           <MapSearch />
           <MapLayerSelect />

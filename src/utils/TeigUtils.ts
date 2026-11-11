@@ -35,7 +35,23 @@ type ReguleringApiParcel = {
       landNumber: number;
       titleNumber: number;
     }[];
-    coveringParcel: boolean;
+    // Satt av /point/cadestral_unit: teigen som dekker punktet det ble klikket i.
+    coveringParcel?: boolean;
+    // Satt av /krets/{id}/cadastral_unit: false for teiger som ligger utenfor kretsen, men er
+    // med fordi de deler matrikkelenhet med en teig innenfor.
+    inKrets?: boolean;
+  };
+};
+
+export type ReguleringApiGrunnkrets = {
+  type: "Feature";
+  id: number;
+  featureType: "Krets";
+  geometry: { type: "MultiPolygon"; coordinates: Coordinate[][][] };
+  properties: {
+    municipalityNumber: string;
+    kretsnummer: number;
+    kretsnavn: string;
   };
 };
 
@@ -48,8 +64,7 @@ export type ReguleringApiResponse = {
 export async function getMatrikkelenheterConnectedToTeigAtPoint(
   coordinates: Coordinate,
 ): Promise<Matrikkelenhet[]> {
-  //convert coordinates to utm33
-  const utm33Coordinates = transform(coordinates, "EPSG:3857", "EPSG:32633");
+  const utm33Coordinates = utm33(coordinates);
 
   const url = new URL(`/api/regulering/point/cadestral_unit`, window.location.origin);
   url.searchParams.append("easting", String(utm33Coordinates[0]));
@@ -61,7 +76,88 @@ export async function getMatrikkelenheterConnectedToTeigAtPoint(
   }
 
   const cadastralUnitsConnectedToParcel = (await res.json()) as ReguleringApiResponse;
-  return reguleringApiToMatrikkelEnhet(cadastralUnitsConnectedToParcel);
+  const matrikkelenheter = reguleringApiToMatrikkelEnhet(cadastralUnitsConnectedToParcel);
+
+  //populate connectedToOtherUnits for each matrikkelenhet
+  //All the matrikkelenheter returned here should be connected to each other
+  for (const enhet of matrikkelenheter) {
+    enhet.connectedToOtherUnits = matrikkelenheter
+      .filter((otherEnhet) => otherEnhet.id !== enhet.id)
+      .map((otherEnhet) => otherEnhet.id);
+  }
+  return matrikkelenheter;
+}
+
+function utm33(coordinates: Coordinate): Coordinate {
+  return transform(coordinates, "EPSG:3857", "EPSG:32633");
+}
+
+/** Grunnkretsen som dekker punktet, eller undefined når punktet ikke ligger i noen. */
+export async function getGrunnkretsAtPoint(
+  coordinates: Coordinate,
+): Promise<ReguleringApiGrunnkrets | undefined> {
+  const [easting, northing] = utm33(coordinates);
+  const url = new URL(`/api/regulering/point/krets`, window.location.origin);
+  url.searchParams.append("easting", String(easting));
+  url.searchParams.append("northing", String(northing));
+
+  const res = await fetch(url);
+  if (res.status === 404) return undefined;
+  if (!res.ok) {
+    throw new Error(`API call failed with status: ${res.status}`);
+  }
+  return (await res.json()) as ReguleringApiGrunnkrets;
+}
+
+/**
+ * Matrikkelenhetene med teig i grunnkretsen. Enheter som deler en teig hører sammen, så de
+ * kobles slik at de fjernes samlet.
+ */
+export async function getMatrikkelenheterInGrunnkrets(kretsId: number): Promise<Matrikkelenhet[]> {
+  const res = await fetch(
+    new URL(`/api/regulering/krets/${kretsId}/cadastral_unit`, window.location.origin),
+  );
+  if (!res.ok) {
+    throw new Error(`API call failed with status: ${res.status}`);
+  }
+  const matrikkelenheter = reguleringApiToMatrikkelEnhet(
+    (await res.json()) as ReguleringApiResponse,
+  );
+  connectUnitsSharingTeig(matrikkelenheter);
+  return matrikkelenheter;
+}
+
+function connectUnitsSharingTeig(matrikkelenheter: Matrikkelenhet[]) {
+  const unitIdsByTeig = new Map<number, string[]>();
+  for (const enhet of matrikkelenheter) {
+    for (const teig of enhet.features) {
+      const unitIds = unitIdsByTeig.get(teig.properties.lokalid) ?? [];
+      unitIds.push(enhet.id);
+      unitIdsByTeig.set(teig.properties.lokalid, unitIds);
+    }
+  }
+
+  const unitsById = new Map(matrikkelenheter.map((enhet) => [enhet.id, enhet]));
+  const grouped = new Set<string>();
+  for (const start of matrikkelenheter) {
+    if (grouped.has(start.id)) continue;
+    // Alle enheter som kan nås fra start gjennom delte teiger
+    const group = [start.id];
+    grouped.add(start.id);
+    for (const unitId of group) {
+      for (const teig of unitsById.get(unitId)?.features ?? []) {
+        for (const neighbourId of unitIdsByTeig.get(teig.properties.lokalid) ?? []) {
+          if (grouped.has(neighbourId)) continue;
+          grouped.add(neighbourId);
+          group.push(neighbourId);
+        }
+      }
+    }
+    for (const unitId of group) {
+      const enhet = unitsById.get(unitId);
+      if (enhet) enhet.connectedToOtherUnits = group.filter((otherId) => otherId !== unitId);
+    }
+  }
 }
 export async function fetchTeigerInGeometry(geometry: Geometry): Promise<Teig[]> {
   const features = await fetchTeigFeatures(within("representasjonspunkt", geometry, "EPSG:3857"));
@@ -241,14 +337,6 @@ function reguleringApiToMatrikkelEnhet(input: ReguleringApiResponse): Matrikkele
     });
   }
 
-  //populate connectedToOtherUnits for each matrikkelenhet
-  //All the matrikkelenheter returned here should be connected to each other
-  for (const enhet of matrikkelenheterArray) {
-    enhet.connectedToOtherUnits = matrikkelenheterArray
-      .filter((otherEnhet) => otherEnhet.id !== enhet.id)
-      .map((otherEnhet) => otherEnhet.id);
-  }
-
   return matrikkelenheterArray;
 }
 
@@ -258,6 +346,7 @@ function reguleringApiParcelToTeigResponse(input: ReguleringApiParcel): Teig {
     type: input.type,
     properties: {
       lokalid: input.id,
+      inKrets: input.properties.inKrets,
     },
   };
 }

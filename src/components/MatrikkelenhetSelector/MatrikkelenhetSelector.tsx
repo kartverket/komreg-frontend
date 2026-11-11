@@ -26,6 +26,13 @@ const matrikkelenhetLayerStyle = new Style({
   stroke: new Stroke({ color: "#1a833b", width: 3 }),
 });
 
+// Teiger utenfor grunnkretsen de ble hentet med: med fordi de deler matrikkelenhet med en teig
+// innenfor, og tegnes annerledes så de er lette å få øye på.
+const outsideKretsStyle = new Style({
+  fill: new Fill({ color: "rgba(196,98,0,0.2)" }),
+  stroke: new Stroke({ color: "#c46200", width: 3, lineDash: [6, 4] }),
+});
+
 export function MatrikkelenhetSelector({
   isActive,
   onToggle,
@@ -137,24 +144,38 @@ function Matrikkelenhet({ enhet }: { enhet: Matrikkelenhet }) {
           />
         ))}
       {enhet.features.map((teig) => (
-        <Teig key={"teig:" + teig.properties.lokalid} geometry={teig.geometry} enhetId={enhet.id} />
+        <Teig
+          key={"teig:" + teig.properties.lokalid}
+          geometry={teig.geometry}
+          enhetId={enhet.id}
+          inKrets={teig.properties.inKrets}
+        />
       ))}
     </>
   );
 }
 
-function Teig({ geometry, enhetId }: { geometry: Teig["geometry"]; enhetId: string }) {
+function Teig({
+  geometry,
+  enhetId,
+  inKrets,
+}: {
+  geometry: Teig["geometry"];
+  enhetId: string;
+  inKrets?: boolean;
+}) {
   const source = useVectorSource();
   useEffect(() => {
     const feature = new Feature({
       geometry: new Polygon(geometry.coordinates).transform("EPSG:32633", "EPSG:3857"), //Regulerings api returns coordinates in EPSG:32633
       [MATRIKKELENHET_ID_KEY]: enhetId,
     });
+    if (inKrets === false) feature.setStyle(outsideKretsStyle);
     source.addFeature(feature);
     return () => {
       source.removeFeature(feature);
     };
-  }, [geometry, enhetId, source]);
+  }, [geometry, enhetId, inKrets, source]);
 
   return null;
 }
