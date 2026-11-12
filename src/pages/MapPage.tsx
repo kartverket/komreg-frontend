@@ -1,5 +1,5 @@
 import { XYZLayer } from "@/components/Map/XYZLayer";
-import { Link as RouterLink } from "@tanstack/react-router";
+import { Link as RouterLink, useNavigate, useSearch } from "@tanstack/react-router";
 import { Button, Heading } from "@kv-designsystem/react";
 import { ArrowLeftIcon } from "@navikt/aksel-icons";
 import { Toolbar } from "@/components/Toolbar/Toolbar";
@@ -14,6 +14,10 @@ import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
 
 export function MapPage() {
   const [activeTool, setActiveTool] = useState<"drawing" | "parcel" | "krets" | null>(null);
+  const { lat, lon, zoom } = useSearch({ from: "/kart" });
+  const navigate = useNavigate();
+  const initialPosition =
+    lat !== undefined && lon !== undefined && zoom !== undefined ? { lat, lon, zoom } : undefined;
   const selectedCount = useMatrikkelenheter((state) => state.matrikkelenheter.size);
   const norgeskartTileUrl =
     "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png";
@@ -23,7 +27,12 @@ export function MapPage() {
       <Heading level={1} className="map-title">
         Kart
       </Heading>
-      <OlMap>
+      <OlMap
+        initialPosition={initialPosition}
+        onPositionChange={(position) =>
+          void navigate({ to: "/kart", search: position, replace: true })
+        }
+      >
         <XYZLayer tileUrl={norgeskartTileUrl} />
         <Toolbar>
           <MapDrawing

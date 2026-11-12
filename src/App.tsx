@@ -18,6 +18,8 @@ import { NewRegulering } from "./pages/NewRegulering";
 import { ReguleringDetail } from "./pages/ReguleringDetail";
 import { Reguleringer } from "./pages/Reguleringer";
 
+export type MapSearchParams = { lat?: number; lon?: number; zoom?: number };
+
 // Every page but the map: the nav, then the content in a width-capped <main>.
 function Layout({ children }: { children: ReactNode }) {
   return (
@@ -87,6 +89,13 @@ function createAppRouter(history: RouterHistory) {
     createRoute({
       getParentRoute: () => rootRoute,
       path: "/kart",
+      // Map position lives in the URL so a refresh keeps it. All three or none.
+      validateSearch: (search: Record<string, unknown>): MapSearchParams => {
+        const { lat, lon, zoom } = search;
+        if (lat == null || lon == null || zoom == null) return {};
+        const position = { lat: Number(lat), lon: Number(lon), zoom: Number(zoom) };
+        return Object.values(position).every(Number.isFinite) ? position : {};
+      },
       // Its own chunk: OpenLayers is heavy, and the front page shouldn't wait for it.
       component: lazyRouteComponent(() => import("./pages/MapPage"), "MapPage"),
     }),
