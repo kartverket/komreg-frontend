@@ -41,6 +41,33 @@ export function MatrikkelenhetSelector({
   onToggle: (isActive: boolean) => void;
 }) {
   const { matrikkelenheter } = useMatrikkelenheter();
+
+  const teigerInnAllMatrikkelenheter = new Map<string, Teig>();
+  const allAdresses = new Map<string, Address>();
+
+  matrikkelenheter.forEach((matrikkelenhet) => {
+    matrikkelenhet.addresses?.forEach((address) => {
+      allAdresses.set(
+        "add:" +
+          (address.kommunenummer ?? "") +
+          (address.adressekode ?? "") +
+          (address.nummer ?? "") +
+          (address.bokstav ?? ""),
+        address,
+      );
+    });
+    matrikkelenhet.features.forEach((teig) => {
+      teigerInnAllMatrikkelenheter.set(teig.properties.lokalid.toString(), {
+        // teigerInnAllMatrikkelenheter Map'et er nøklet på lokalid, så hver teig lagres kun én gang. Hvis flere
+        // matrikkelenheter deler samme teig, er det den siste av dem som blir stående
+        // som matrikkelenhetId. Det er greit, fordi enhetene som deler en teig er
+        // koblet sammen via .connectedToOtherUnits.
+        matrikkelenhetId: matrikkelenhet.id,
+        ...teig,
+      });
+    });
+  });
+
   return (
     <>
       <Tooltip content={`Skru ${isActive ? "av" : "på"} henting av matrikkelenheter`}>
@@ -53,8 +80,17 @@ export function MatrikkelenhetSelector({
         </ToggleButton>
       </Tooltip>
       <VectorLayer style={matrikkelenhetLayerStyle}>
-        {Array.from(matrikkelenheter.values()).map((matrikkelenhet) => (
-          <Matrikkelenhet key={matrikkelenhet.id} enhet={matrikkelenhet} />
+        {Array.from(allAdresses).map(([key, address]) => (
+          <AddressComponent key={key} address={address} />
+        ))}
+        {Array.from(teigerInnAllMatrikkelenheter.values()).map((teig) => (
+          <Teig
+            key={"teig:" + teig.properties.lokalid}
+            geometry={teig.geometry}
+            //@ts-ignore
+            enhetId={teig.matrikkelenhetId}
+            inKrets={teig.properties.inKrets}
+          />
         ))}
         {isActive && <MapClickInteraction />}
       </VectorLayer>
@@ -120,39 +156,6 @@ function MapClickInteraction() {
   }, [map, source]);
 
   return null;
-}
-
-function Matrikkelenhet({ enhet }: { enhet: Matrikkelenhet }) {
-  return (
-    <>
-      {enhet.addresses
-        ?.filter(
-          (address) =>
-            address.representasjonspunkt?.lon !== undefined &&
-            address.representasjonspunkt?.lat !== undefined,
-        )
-        .map((address) => (
-          <AddressComponent
-            key={
-              "add:" +
-              (address.kommunenummer ?? "") +
-              (address.adressekode ?? "") +
-              (address.nummer ?? "") +
-              (address.bokstav ?? "")
-            }
-            address={address}
-          />
-        ))}
-      {enhet.features.map((teig) => (
-        <Teig
-          key={"teig:" + teig.properties.lokalid}
-          geometry={teig.geometry}
-          enhetId={enhet.id}
-          inKrets={teig.properties.inKrets}
-        />
-      ))}
-    </>
-  );
 }
 
 function Teig({
