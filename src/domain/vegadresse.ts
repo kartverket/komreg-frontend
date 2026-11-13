@@ -147,10 +147,15 @@ export function utenNyeVegadresser({
 // Det omvendte av medNyeVegadresser, for å redigere en lagret regulering. Vegen til den første
 // adressen på en veg blir felles veg, og adresser med en annen veg får egen veg.
 export function lagVegadressevalg(vegadresser: VegadresseDraft[]): Vegadressevalg {
+  const heleVeger = new Set<string>();
   const veger = new Map<string, Veg>();
   const egneVeger = new Map<string, Veg | null>();
   const husnumre = new Map<string, string>();
   for (const adresse of vegadresser) {
+    if (adresse.heleVegen) {
+      heleVeger.add(vegNokkel(adresse));
+      continue;
+    }
     const nokkel = vegadresseNokkel(adresse);
     if (adresse.nyVeg) {
       const felles = veger.get(vegNokkel(adresse));
@@ -161,7 +166,7 @@ export function lagVegadressevalg(vegadresser: VegadresseDraft[]): Vegadresseval
     }
     if (adresse.nyttHusnummer) husnumre.set(nokkel, formatHusnummer(adresse.nyttHusnummer));
   }
-  return { veger, egneVeger, husnumre };
+  return { heleVeger, veger, egneVeger, husnumre };
 }
 
 export function nyeAdressekoder(vegadresser: VegadresseDraft[]): number[] {
