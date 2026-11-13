@@ -21,6 +21,8 @@ export type VegadresseDraft = {
   nyVeg?: Veg;
   // Undefined beholder dagens nummer og bokstav.
   nyttHusnummer?: Husnummer;
+  // Hele vegen flyttes til til kommune og beholder adressekoden. Adressene følger med uendret.
+  heleVegen?: boolean;
 };
 
 // Adressene på én veg i fra kommune. De flyttes til samme veg i til kommune.
@@ -103,6 +105,8 @@ function lesHusnummer(tekst: string): Husnummer | undefined {
 }
 
 export type Vegadressevalg = {
+  // Nøkkel: vegNokkel. Hele vegen flyttes, så ingen veg i til kommune velges.
+  heleVeger: ReadonlySet<string>;
   // Nøkkel: vegNokkel. Vegen gjelder alle adressene på vegen i fra kommune.
   veger: ReadonlyMap<string, Veg>;
   // Nøkkel: vegadresseNokkel. Gir adressen en annen veg enn resten. null er ikke valgt ennå.
@@ -116,6 +120,9 @@ export function medNyeVegadresser(
   valg: Vegadressevalg,
 ): VegadresseDraft[] {
   return vegadresser.map((adresse) => {
+    if (valg.heleVeger.has(vegNokkel(adresse))) {
+      return { ...adresse, heleVegen: true, nyVeg: adresse.veg };
+    }
     const nokkel = vegadresseNokkel(adresse);
     const nyVeg = valg.egneVeger.has(nokkel)
       ? (valg.egneVeger.get(nokkel) ?? undefined)

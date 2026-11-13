@@ -1,4 +1,4 @@
-import { Button, Heading, Input, Paragraph, Table } from "@kv-designsystem/react";
+import { Button, Checkbox, Heading, Input, Paragraph, Table } from "@kv-designsystem/react";
 import {
   formatHusnummer,
   formatNyVegadresse,
@@ -29,88 +29,106 @@ export function FlyttVegadresser({ vegvalg }: { vegvalg: Vegvalgstate }) {
       </Paragraph>
       {vegvalg.grupper.map((gruppe) => {
         const vegnavn = formatVeg(gruppe.veg);
+        const heleVegen = vegvalg.flyttesHeleVegen(gruppe.nokkel);
         return (
           <section key={gruppe.nokkel} className="veg-gruppe">
             <Heading level={3} data-size="2xs">
               {vegnavn}
             </Heading>
-            <VegVelger
-              key={vegvalg.tilKommunenummer}
-              tilKommunenummer={vegvalg.tilKommunenummer}
-              label={`Veg i til kommune for ${vegnavn}`}
-              valgt={vegvalg.valgtVeg(gruppe.nokkel)}
-              onVelg={(veg) => vegvalg.velgVeg(gruppe.nokkel, veg)}
+            <Checkbox
+              label={`Flytt hele vegen ${vegnavn}`}
+              checked={heleVegen}
+              onChange={(event) =>
+                vegvalg.flyttHeleVegen(gruppe.nokkel, gruppe.veg, event.target.checked)
+              }
             />
-            <div className="regulering-table-wrapper">
-              <Table data-size="sm" zebra>
-                <Table.Head>
-                  <Table.Row>
-                    <Table.HeaderCell>Adresse</Table.HeaderCell>
-                    <Table.HeaderCell>Veg i til kommune</Table.HeaderCell>
-                    <Table.HeaderCell>Ny adresse</Table.HeaderCell>
-                    <Table.HeaderCell>Nytt husnummer</Table.HeaderCell>
-                    <Table.HeaderCell>Status</Table.HeaderCell>
-                  </Table.Row>
-                </Table.Head>
-                <Table.Body>
-                  {gruppe.adresser.map((adresse) => {
-                    const nokkel = vegadresseNokkel(adresse);
-                    const tekst = formatVegadresse(adresse);
-                    const status = vegvalg.status(adresse, nokkel);
-                    return (
-                      <Table.Row key={nokkel}>
-                        <Table.Cell>{tekst}</Table.Cell>
-                        <Table.Cell>
-                          {vegvalg.harEgenVeg(nokkel) ? (
-                            <div className="egen-veg">
-                              <VegVelger
-                                key={vegvalg.tilKommunenummer}
-                                tilKommunenummer={vegvalg.tilKommunenummer}
-                                label={`Veg i til kommune for ${tekst}`}
-                                valgt={adresse.nyVeg}
-                                onVelg={(veg) => vegvalg.velgEgenVeg(nokkel, veg)}
-                              />
-                              <Button
-                                type="button"
-                                variant="tertiary"
-                                data-size="sm"
-                                aria-label={`Bruk felles veg for ${tekst}`}
-                                onClick={() => vegvalg.brukEgenVeg(nokkel, false)}
-                              >
-                                Bruk felles veg
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="tertiary"
-                              data-size="sm"
-                              aria-label={`Velg annen veg for ${tekst}`}
-                              onClick={() => vegvalg.brukEgenVeg(nokkel, true)}
-                            >
-                              Velg annen veg
-                            </Button>
-                          )}
-                        </Table.Cell>
-                        <Table.Cell>{formatNyVegadresse(adresse)}</Table.Cell>
-                        <Table.Cell>
-                          <Input
-                            className="husnummer-input"
-                            aria-label={`Nytt husnummer for ${tekst}`}
-                            placeholder={formatHusnummer(adresse.husnummer)}
-                            value={vegvalg.husnummer(nokkel)}
-                            onChange={(event) => vegvalg.endreHusnummer(nokkel, event.target.value)}
-                          />
-                        </Table.Cell>
-                        <Table.Cell className={status === "opptatt" ? "form-error" : undefined}>
-                          {STATUSTEKST[status]}
-                        </Table.Cell>
+            {heleVegen ? (
+              <Paragraph data-size="sm">
+                Vegen flyttes til til kommune med samme adressekode. Adressene følger med uendret.
+              </Paragraph>
+            ) : (
+              <>
+                <VegVelger
+                  key={vegvalg.tilKommunenummer}
+                  tilKommunenummer={vegvalg.tilKommunenummer}
+                  label={`Veg i til kommune for ${vegnavn}`}
+                  valgt={vegvalg.valgtVeg(gruppe.nokkel)}
+                  onVelg={(veg) => vegvalg.velgVeg(gruppe.nokkel, veg)}
+                />
+                <div className="regulering-table-wrapper">
+                  <Table data-size="sm" zebra>
+                    <Table.Head>
+                      <Table.Row>
+                        <Table.HeaderCell>Adresse</Table.HeaderCell>
+                        <Table.HeaderCell>Veg i til kommune</Table.HeaderCell>
+                        <Table.HeaderCell>Ny adresse</Table.HeaderCell>
+                        <Table.HeaderCell>Nytt husnummer</Table.HeaderCell>
+                        <Table.HeaderCell>Status</Table.HeaderCell>
                       </Table.Row>
-                    );
-                  })}
-                </Table.Body>
-              </Table>
-            </div>
+                    </Table.Head>
+                    <Table.Body>
+                      {gruppe.adresser.map((adresse) => {
+                        const nokkel = vegadresseNokkel(adresse);
+                        const tekst = formatVegadresse(adresse);
+                        const status = vegvalg.status(adresse, nokkel);
+                        return (
+                          <Table.Row key={nokkel}>
+                            <Table.Cell>{tekst}</Table.Cell>
+                            <Table.Cell>
+                              {vegvalg.harEgenVeg(nokkel) ? (
+                                <div className="egen-veg">
+                                  <VegVelger
+                                    key={vegvalg.tilKommunenummer}
+                                    tilKommunenummer={vegvalg.tilKommunenummer}
+                                    label={`Veg i til kommune for ${tekst}`}
+                                    valgt={adresse.nyVeg}
+                                    onVelg={(veg) => vegvalg.velgEgenVeg(nokkel, veg)}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="tertiary"
+                                    data-size="sm"
+                                    aria-label={`Bruk felles veg for ${tekst}`}
+                                    onClick={() => vegvalg.brukEgenVeg(nokkel, false)}
+                                  >
+                                    Bruk felles veg
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="tertiary"
+                                  data-size="sm"
+                                  aria-label={`Velg annen veg for ${tekst}`}
+                                  onClick={() => vegvalg.brukEgenVeg(nokkel, true)}
+                                >
+                                  Velg annen veg
+                                </Button>
+                              )}
+                            </Table.Cell>
+                            <Table.Cell>{formatNyVegadresse(adresse)}</Table.Cell>
+                            <Table.Cell>
+                              <Input
+                                className="husnummer-input"
+                                aria-label={`Nytt husnummer for ${tekst}`}
+                                placeholder={formatHusnummer(adresse.husnummer)}
+                                value={vegvalg.husnummer(nokkel)}
+                                onChange={(event) =>
+                                  vegvalg.endreHusnummer(nokkel, event.target.value)
+                                }
+                              />
+                            </Table.Cell>
+                            <Table.Cell className={status === "opptatt" ? "form-error" : undefined}>
+                              {STATUSTEKST[status]}
+                            </Table.Cell>
+                          </Table.Row>
+                        );
+                      })}
+                    </Table.Body>
+                  </Table>
+                </div>
+              </>
+            )}
           </section>
         );
       })}

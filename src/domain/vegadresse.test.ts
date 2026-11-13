@@ -58,7 +58,12 @@ describe("formatVegadresse og formatNyVegadresse", () => {
 
 describe("medNyeVegadresser", () => {
   const veger = new Map([["0301-1234", kirkevegen]]);
-  const ingenValg = { veger: new Map(), egneVeger: new Map(), husnumre: new Map() };
+  const ingenValg = {
+    heleVeger: new Set<string>(),
+    veger: new Map(),
+    egneVeger: new Map(),
+    husnumre: new Map(),
+  };
 
   it("gir alle adressene på vegen den valgte vegen, og tolker husnummer med bokstav", () => {
     const annen = { ...vegadresse, husnummer: { nummer: 7, bokstav: "" } };
@@ -82,6 +87,13 @@ describe("medNyeVegadresser", () => {
     const egneVeger = new Map([["0301-1234-5", null]]);
     expect(medNyeVegadresser([vegadresse], { ...ingenValg, veger, egneVeger })).toEqual([
       vegadresse,
+    ]);
+  });
+
+  it("lar hele vegen flyttes med samme adressekode, uten å velge veg i til kommune", () => {
+    const heleVeger = new Set(["0301-1234"]);
+    expect(medNyeVegadresser([vegadresse], { ...ingenValg, heleVeger })).toEqual([
+      { ...vegadresse, heleVegen: true, nyVeg: vegadresse.veg },
     ]);
   });
 
