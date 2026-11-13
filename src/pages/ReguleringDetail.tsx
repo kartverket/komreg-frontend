@@ -16,7 +16,7 @@ export function ReguleringDetail() {
   const validId = Number.isSafeInteger(id) && id > 0;
   const [regulering, setRegulering] = useState<Detail | null>(null);
   const [error, setError] = useState(validId ? "" : "Ugyldig regulerings-ID");
-
+  console.log(regulering);
   useEffect(() => {
     if (!validId) return;
     let active = true;

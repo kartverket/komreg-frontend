@@ -3,9 +3,34 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Teig } from "./types/TeigResponse";
-import { createRegulering, REGULERINGER_STORAGE_KEY } from "./api/reguleringer";
+import type { OpprettReguleringRequest } from "./domain/regulering";
+import { createRegulering } from "./api/reguleringer";
 import { useMatrikkelenheter } from "./hooks/useMatrikkelenheter";
 import { App } from "./App";
+
+const lagrede = vi.hoisted(() => ({ liste: [] as OpprettReguleringRequest[], feilNeste: false }));
+
+vi.mock("./api/reguleringer", () => ({
+  createRegulering: (request: OpprettReguleringRequest) => {
+    if (lagrede.feilNeste) {
+      lagrede.feilNeste = false;
+      return Promise.reject(new Error("Reguleringen kunne ikke lagres på serveren"));
+    }
+    lagrede.liste.push(request);
+    return Promise.resolve(lagrede.liste.length);
+  },
+  getRegulering: (id: number) => Promise.resolve({ id, ...lagrede.liste[id - 1] }),
+  listReguleringer: () =>
+    Promise.resolve(
+      lagrede.liste.map((r, i) => ({
+        id: i + 1,
+        navn: r.navn,
+        dato: r.dato,
+        fraKommunenummer: r.grensejustering.fraKommunenummer,
+        tilKommunenummer: r.grensejustering.tilKommunenummer,
+      })),
+    ),
+}));
 
 function renderAt(path: string) {
   return render(<App history={createMemoryHistory({ initialEntries: [path] })} />);
@@ -105,7 +130,8 @@ async function fillInAndSubmit() {
 describe("App", () => {
   beforeEach(() => {
     useMatrikkelenheter.getState().clearMatrikkelenheter();
-    localStorage.removeItem(REGULERINGER_STORAGE_KEY);
+    lagrede.liste = [];
+    lagrede.feilNeste = false;
     stubEksisterendeMatrikkelnumre();
   });
 
@@ -223,7 +249,7 @@ describe("App", () => {
     await fillInAndSubmit();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Kunne ikke sjekke");
-    expect(localStorage.getItem(REGULERINGER_STORAGE_KEY)).toBeNull();
+    expect(lagrede.liste).toHaveLength(0);
   });
 
   it("moves a teig without matrikkelnummer to til kommune", async () => {
@@ -357,14 +383,12 @@ describe("App", () => {
 
   it("keeps selected parcels when creation fails", async () => {
     selectMatrikkelenhet();
-    vi.spyOn(Storage.prototype, "setItem").mockImplementationOnce(() => {
-      throw new Error("Lagring feilet");
-    });
+    lagrede.feilNeste = true;
     renderAt("/reguleringer/ny");
 
     await fillInAndSubmit();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("kunne ikke lagres lokalt");
+    expect(await screen.findByRole("alert")).toHaveTextContent("kunne ikke lagres på serveren");
     expect(useMatrikkelenheter.getState().matrikkelenheter.has("0301/1/1")).toBe(true);
   });
 
