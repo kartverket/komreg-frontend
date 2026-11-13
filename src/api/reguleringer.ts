@@ -6,8 +6,6 @@ import type {
 } from "@/domain/regulering";
 import type { ReformSpec } from "@/types/ReformSpec";
 
-export const REGULERINGER_STORAGE_KEY = "komreg:reguleringer:v1";
-
 export async function createRegulering(request: OpprettReguleringRequest): Promise<number> {
   const reformSpec = tilReformSpec(request);
   //const id = Math.max(0, ...reguleringer.map((item) => item.id)) + 1;
