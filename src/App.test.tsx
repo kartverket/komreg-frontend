@@ -4,6 +4,7 @@ import { createMemoryHistory } from "@tanstack/react-router";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Teig } from "./types/TeigResponse";
 import { createRegulering, REGULERINGER_STORAGE_KEY } from "./api/reguleringer";
+import type { OpprettReguleringRequest } from "./domain/regulering";
 import { useMatrikkelenheter } from "./hooks/useMatrikkelenheter";
 import { App } from "./App";
 
@@ -90,6 +91,20 @@ function stubVegITilKommune(adressenavn: string, husnumre: number[]) {
     );
   vi.stubGlobal("fetch", fetchMock);
 }
+
+const lagretRegulering: OpprettReguleringRequest = {
+  navn: "Lagret regulering",
+  dato: "2026-10-21",
+  grensejustering: {
+    fraKommunenummer: "0301",
+    tilKommunenummer: "0302",
+    matrikkelenheter: [
+      { kommunenummer: "0301", gardsnummer: 1, bruksnummer: 1, teigIder: [1], nyGardsnummer: 5 },
+    ],
+    teiger: [],
+    vegadresser: [],
+  },
+};
 
 async function fillIn() {
   await userEvent.type(await screen.findByRole("textbox", { name: "Navn" }), "Ny regulering");
@@ -353,6 +368,102 @@ describe("App", () => {
 
     await userEvent.click(screen.getByRole("link", { name: "Tilbake til reguleringer" }));
     expect(await screen.findByRole("table")).toBeVisible();
+  });
+
+  it("edits a saved regulation and shows the changes", async () => {
+    const id = await createRegulering(lagretRegulering);
+    renderAt(`/reguleringer/${id}/rediger`);
+
+    const navn = await screen.findByRole("textbox", { name: "Navn" });
+    expect(navn).toHaveValue("Lagret regulering");
+    expect(screen.getByLabelText("Ikrafttredelsesdato")).toHaveValue("2026-10-21");
+    expect(screen.getByRole("textbox", { name: "Fra kommune" })).toHaveAttribute("readonly");
+    expect(screen.getByRole("textbox", { name: "Til kommune" })).toHaveValue("0302");
+    expect(screen.getByRole("textbox", { name: "Nytt gårdsnummer for 0301-1/1" })).toHaveValue("5");
+    expect(
+      screen.queryByRole("checkbox", { name: "Flytt hele gårdsnummer 0301-1" }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.clear(navn);
+    await userEvent.type(navn, "Endret regulering");
+    const gardsnummer = screen.getByRole("textbox", { name: "Nytt gårdsnummer for 0301-1/1" });
+    await userEvent.clear(gardsnummer);
+    await userEvent.type(gardsnummer, "7");
+    await userEvent.click(screen.getByRole("button", { name: "Lagre endringer" }));
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Endret regulering" }),
+    ).toBeVisible();
+    expect(screen.getByRole("cell", { name: "7/1" })).toBeVisible();
+    expect(JSON.parse(localStorage.getItem(REGULERINGER_STORAGE_KEY) ?? "[]")).toHaveLength(1);
+  });
+
+  it("keeps the chosen veg and husnummer when editing, and accepts a new husnummer", async () => {
+    stubVegITilKommune("Storgata", [1]);
+    const id = await createRegulering({
+      ...lagretRegulering,
+      grensejustering: {
+        ...lagretRegulering.grensejustering,
+        vegadresser: [
+          {
+            kommunenummer: "0301",
+            veg: { adressekode: 1234, adressenavn: "Storgata" },
+            husnummer: { nummer: 5, bokstav: "" },
+            nyVeg: { adressekode: 9999, adressenavn: "Storgata" },
+            nyttHusnummer: { nummer: 5, bokstav: "B" },
+          },
+        ],
+      },
+    });
+    renderAt(`/reguleringer/${id}/rediger`);
+
+    const husnummer = await screen.findByRole("textbox", { name: "Nytt husnummer for Storgata 5" });
+    expect(husnummer).toHaveValue("5B");
+    expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
+
+    await userEvent.clear(husnummer);
+    await userEvent.type(husnummer, "6");
+    await userEvent.click(screen.getByRole("button", { name: "Lagre endringer" }));
+
+    expect(await screen.findByRole("row", { name: "Storgata 5 Storgata 6 9999" })).toBeVisible();
+  });
+
+  it("does not save an edit that is invalid", async () => {
+    const id = await createRegulering(lagretRegulering);
+    renderAt(`/reguleringer/${id}/rediger`);
+
+    const til = await screen.findByRole("textbox", { name: "Til kommune" });
+    await userEvent.clear(til);
+    await userEvent.type(til, "0301");
+    await userEvent.click(screen.getByRole("button", { name: "Lagre endringer" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Fra og til kommune må være forskjellige",
+    );
+    expect(JSON.parse(localStorage.getItem(REGULERINGER_STORAGE_KEY) ?? "[]")).toEqual([
+      { id, ...lagretRegulering },
+    ]);
+  });
+
+  it("opens the edit page from the regulation details and goes back on cancel", async () => {
+    const id = await createRegulering(lagretRegulering);
+    renderAt(`/reguleringer/${id}`);
+
+    await userEvent.click(await screen.findByRole("link", { name: "Rediger regulering" }));
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Rediger regulering" }),
+    ).toBeVisible();
+
+    await userEvent.click(screen.getByRole("link", { name: "Avbryt" }));
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Lagret regulering" }),
+    ).toBeVisible();
+  });
+
+  it("shows an error when the regulation to edit does not exist", async () => {
+    renderAt("/reguleringer/404/rediger");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Fant ikke reguleringen");
   });
 
   it("keeps selected parcels when creation fails", async () => {

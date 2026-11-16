@@ -1,5 +1,11 @@
 import type { Matrikkelenhet } from "@/types/Matrikkelenhet";
-import { validerVegadresser, type VegadresseDraft } from "./vegadresse";
+import {
+  lagVegadressevalg,
+  utenNyeVegadresser,
+  validerVegadresser,
+  type VegadresseDraft,
+  type Vegadressevalg,
+} from "./vegadresse";
 
 export type MatrikkelenhetDraft = {
   kommunenummer: string;
@@ -52,6 +58,22 @@ export type ReguleringDetail = {
   navn: string;
   dato: string;
   grensejustering: GrensejusteringDraft;
+};
+
+// Det som er valgt i kartet, uten det brukeren har fylt inn i skjemaet.
+export type Grunnlag = {
+  matrikkelenheter: MatrikkelenhetDraft[];
+  teiger: TeigDraft[];
+  vegadresser: VegadresseDraft[];
+};
+
+export type Startverdier = {
+  navn: string;
+  dato: string;
+  fraKommunenummer: string;
+  tilKommunenummer: string;
+  nyeNumre: ReadonlyMap<string, NyttMatrikkelnummerInput>;
+  vegvalg: Vegadressevalg;
 };
 
 // Teiger uten matrikkelnummer (gnr 0: "Mnr mangler" og "Mnr mangler vann") returnerer null
@@ -130,6 +152,52 @@ export function medNyeMatrikkelnumre(
       ...(nyBruksnummer !== undefined && { nyBruksnummer }),
     };
   });
+}
+
+function utenNyttMatrikkelnummer({
+  kommunenummer,
+  gardsnummer,
+  bruksnummer,
+  teigIder,
+}: MatrikkelenhetDraft): MatrikkelenhetDraft {
+  return { kommunenummer, gardsnummer, bruksnummer, teigIder };
+}
+
+function lagNyeNumreInput(
+  matrikkelenheter: MatrikkelenhetDraft[],
+): Map<string, NyttMatrikkelnummerInput> {
+  const nyeNumre = new Map<string, NyttMatrikkelnummerInput>();
+  for (const enhet of matrikkelenheter) {
+    if (!harNyttMatrikkelnummer(enhet)) continue;
+    nyeNumre.set(formatMatrikkelnummer(enhet), {
+      gardsnummer: enhet.nyGardsnummer?.toString() ?? "",
+      bruksnummer: enhet.nyBruksnummer?.toString() ?? "",
+    });
+  }
+  return nyeNumre;
+}
+
+// Deler en lagret regulering i det som er valgt og det som er fylt inn, slik skjemaet har dem
+// når reguleringen opprettes.
+export function lagRedigering({ navn, dato, grensejustering }: ReguleringDetail): {
+  grunnlag: Grunnlag;
+  startverdier: Startverdier;
+} {
+  return {
+    grunnlag: {
+      matrikkelenheter: grensejustering.matrikkelenheter.map(utenNyttMatrikkelnummer),
+      teiger: grensejustering.teiger,
+      vegadresser: grensejustering.vegadresser.map(utenNyeVegadresser),
+    },
+    startverdier: {
+      navn,
+      dato,
+      fraKommunenummer: grensejustering.fraKommunenummer,
+      tilKommunenummer: grensejustering.tilKommunenummer,
+      nyeNumre: lagNyeNumreInput(grensejustering.matrikkelenheter),
+      vegvalg: lagVegadressevalg(grensejustering.vegadresser),
+    },
+  };
 }
 
 export type Matrikkelnummer = {

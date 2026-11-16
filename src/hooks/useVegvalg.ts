@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   finnKollisjoner,
   finnVegMedSammeNavn,
@@ -31,8 +31,14 @@ function tomtVegvalg(tilKommunenummer: string): Vegvalg {
 
 export type Adressestatus = "ikke-valgt" | "sjekker" | "ledig" | "opptatt";
 
-export function useVegvalg(valgteVegadresser: VegadresseDraft[]) {
-  const [vegvalg, setVegvalg] = useState(() => tomtVegvalg(""));
+// Med startverdier, for å redigere en regulering, er vegene og husnumrene allerede valgt.
+export function useVegvalg(
+  valgteVegadresser: VegadresseDraft[],
+  start?: { tilKommunenummer: string; valg: Vegadressevalg },
+) {
+  const [vegvalg, setVegvalg] = useState(() =>
+    start ? { ...tomtVegvalg(start.tilKommunenummer), ...start.valg } : tomtVegvalg(""),
+  );
   const vegadresser = medNyeVegadresser(valgteVegadresser, vegvalg);
   const kollisjoner = finnKollisjoner(vegadresser, [...vegvalg.eksisterende.values()].flat());
 
@@ -54,6 +60,16 @@ export function useVegvalg(valgteVegadresser: VegadresseDraft[]) {
       )
       .catch((error) => console.log(error));
   }
+
+  // Sjekker de valgte vegene mot til kommune, slik at kollisjoner vises med en gang.
+  useEffect(() => {
+    if (!start) return;
+    const valgte = [...start.valg.veger.values(), ...start.valg.egneVeger.values()];
+    const veger = new Map(valgte.flatMap((veg) => (veg ? [[veg.adressekode, veg] as const] : [])));
+    for (const veg of veger.values()) hentEksisterende(start.tilKommunenummer, veg);
+    // Bare ved oppstart: senere valg henter sine egne adresser.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function velgVeg(nokkel: string, veg: Veg | undefined) {
     const { tilKommunenummer } = vegvalg;

@@ -7,8 +7,10 @@ import {
   formatVegadresse,
   grupperPaVeg,
   lagVegadresseDrafts,
+  lagVegadressevalg,
   medNyeVegadresser,
   nyeAdressekoder,
+  utenNyeVegadresser,
   validerVegadresser,
   type VegadresseDraft,
 } from "./vegadresse";
@@ -23,6 +25,33 @@ const vegadresse: VegadresseDraft = {
 };
 
 const flyttet: VegadresseDraft = { ...vegadresse, nyVeg: kirkevegen };
+
+describe("lagVegadressevalg", () => {
+  const nesteAdresse = { ...vegadresse, husnummer: { nummer: 7, bokstav: "" } };
+
+  it("gjør en lagret flytting om til valg som gir samme adresser tilbake", () => {
+    const lagret = [
+      { ...flyttet, nyttHusnummer: { nummer: 5, bokstav: "B" } },
+      { ...nesteAdresse, nyVeg: kirkevegen },
+    ];
+
+    const valg = lagVegadressevalg(lagret);
+
+    expect(valg.husnumre.get("0301-1234-5")).toBe("5B");
+    expect(medNyeVegadresser(lagret.map(utenNyeVegadresser), valg)).toEqual(lagret);
+  });
+
+  it("gir adressen egen veg når den har en annen veg enn de andre på vegen", () => {
+    const annenVeg = { adressekode: 9999, adressenavn: "Bakgata" };
+    const lagret = [flyttet, { ...nesteAdresse, nyVeg: annenVeg }];
+
+    const valg = lagVegadressevalg(lagret);
+
+    expect(valg.veger.get("0301-1234")).toEqual(kirkevegen);
+    expect(valg.egneVeger.get("0301-1234-7")).toEqual(annenVeg);
+    expect(medNyeVegadresser(lagret.map(utenNyeVegadresser), valg)).toEqual(lagret);
+  });
+});
 
 describe("lagVegadresseDrafts", () => {
   const adresse = { kommunenummer: "0301", adressekode: 1234, nummer: 5, adressenavn: "Storgata" };

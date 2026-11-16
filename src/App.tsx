@@ -14,6 +14,7 @@ import { Link } from "@kv-designsystem/react";
 import { ErrorPage } from "./pages/ErrorPage";
 import { Home } from "./pages/Home";
 import { NotFound } from "./pages/NotFound";
+import { EditRegulering } from "./pages/EditRegulering";
 import { NewRegulering } from "./pages/NewRegulering";
 import { ReguleringDetail } from "./pages/ReguleringDetail";
 import { Reguleringer } from "./pages/Reguleringer";
@@ -82,6 +83,12 @@ function createAppRouter(history: RouterHistory) {
         path: "/reguleringer/$reguleringId",
         remountDeps: ({ params }) => params,
         component: ReguleringDetail,
+      }),
+      createRoute({
+        getParentRoute: () => layout,
+        path: "/reguleringer/$reguleringId/rediger",
+        remountDeps: ({ params }) => params,
+        component: EditRegulering,
       }),
     ]),
     createRoute({

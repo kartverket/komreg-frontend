@@ -20,19 +20,28 @@ function read(): ReguleringDetail[] {
   }
 }
 
-export async function createRegulering(request: OpprettReguleringRequest): Promise<number> {
-  const reguleringer = read();
-  const id = Math.max(0, ...reguleringer.map((item) => item.id)) + 1;
-
+function write(reguleringer: ReguleringDetail[]) {
   try {
-    localStorage.setItem(
-      REGULERINGER_STORAGE_KEY,
-      JSON.stringify([...reguleringer, { id, ...request }]),
-    );
+    localStorage.setItem(REGULERINGER_STORAGE_KEY, JSON.stringify(reguleringer));
   } catch {
     throw new Error("Reguleringen kunne ikke lagres lokalt");
   }
+}
+
+export async function createRegulering(request: OpprettReguleringRequest): Promise<number> {
+  const reguleringer = read();
+  const id = Math.max(0, ...reguleringer.map((item) => item.id)) + 1;
+  write([...reguleringer, { id, ...request }]);
   return id;
+}
+
+export async function updateRegulering(
+  id: number,
+  request: OpprettReguleringRequest,
+): Promise<void> {
+  const reguleringer = read();
+  if (!reguleringer.some((item) => item.id === id)) throw new Error("Fant ikke reguleringen");
+  write(reguleringer.map((item) => (item.id === id ? { id, ...request } : item)));
 }
 
 export async function listReguleringer(): Promise<ReguleringSummary[]> {
