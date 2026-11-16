@@ -296,12 +296,12 @@ describe("App", () => {
     expect(await screen.findByRole("cell", { name: "Opptatt" })).toBeVisible();
     await userEvent.type(
       screen.getByRole("textbox", { name: "Nytt husnummer for Storgata 5" }),
-      "5b",
+      "6",
     );
     expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
 
-    expect(await screen.findByRole("row", { name: "Storgata 5 Storgata 5B 9999" })).toBeVisible();
+    expect(await screen.findByRole("row", { name: "Storgata 5 Storgata 6 9999" })).toBeVisible();
   });
 
   it("lets the user search for and choose another veg", async () => {

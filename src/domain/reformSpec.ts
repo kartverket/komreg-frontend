@@ -13,6 +13,7 @@ function kommuneNokkel(kommunenummer: string): [string, string] {
 }
 
 // Bokstaven på et husnummer kan ikke uttrykkes i formatet, siden `addressNumber` bare er et tall.
+// Adresser med samme nummer og ulik bokstav flyttes derfor samlet.
 export function tilReformSpec({
   navn,
   dato,
@@ -51,6 +52,7 @@ export function tilReformSpec({
   }
 
   const flyttedeVeger = new Set<number>();
+  const flyttedeHusnumre = new Map<string, string>();
   for (const { veg, husnummer, nyVeg, nyttHusnummer, heleVegen } of grensejustering.vegadresser) {
     if (heleVegen) {
       // Hver adresse på vegen gir en egen draft, men vegen skal bare flyttes én gang.
@@ -64,12 +66,15 @@ export function tilReformSpec({
       });
       continue;
     }
-    operasjoner.push({
-      op: "move",
-      kind: "addressNumber",
-      key: [...fra, veg.adressekode, husnummer.nummer],
-      to: [...til, (nyVeg ?? veg).adressekode, (nyttHusnummer ?? husnummer).nummer],
-    });
+    const key = [...fra, veg.adressekode, husnummer.nummer];
+    const to = [...til, (nyVeg ?? veg).adressekode, (nyttHusnummer ?? husnummer).nummer];
+    // Bokstavene på et husnummer (8A, 8B, 8C) er én flytting, siden formatet bare har nummeret.
+    const nokkel = key.join("-");
+    const forrigeMal = flyttedeHusnumre.get(nokkel);
+    if (forrigeMal === undefined) flyttedeHusnumre.set(nokkel, to.join("-"));
+    else if (forrigeMal === to.join("-")) continue;
+    else throw new Error("Adresser med samme husnummer må flyttes samlet, uavhengig av bokstav");
+    operasjoner.push({ op: "move", kind: "addressNumber", key, to });
   }
 
   return { navn, ikrafttredelse: dato, operasjoner };

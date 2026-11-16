@@ -75,6 +75,45 @@ export function vegadresseNokkel(adresse: VegadresseDraft): string {
   return `${vegNokkel(adresse)}-${formatHusnummer(adresse.husnummer)}`;
 }
 
+// Reform-formatet har bare husnummeret uten bokstav, så 8A, 8B og 8C er ett husnummer
+// som bare kan flyttes samlet.
+export function husnummerNokkel(adresse: VegadresseDraft): string {
+  return `${vegNokkel(adresse)}-${adresse.husnummer.nummer}`;
+}
+
+// Adressene som flyttes samlet: samme husnummer på samme veg, med ulike bokstaver.
+export type HusnummerGruppe = {
+  nokkel: string;
+  adresser: VegadresseDraft[];
+};
+
+export function grupperPaHusnummer(vegadresser: VegadresseDraft[]): HusnummerGruppe[] {
+  const grupper = new Map<string, HusnummerGruppe>();
+  for (const adresse of vegadresser) {
+    const nokkel = husnummerNokkel(adresse);
+    const gruppe = grupper.get(nokkel);
+    if (gruppe) gruppe.adresser.push(adresse);
+    else grupper.set(nokkel, { nokkel, adresser: [adresse] });
+  }
+  return [...grupper.values()];
+}
+
+// For eksempel "Langemyrvegen 8A, 8B, 8C".
+export function formatHusnummergruppe(adresser: VegadresseDraft[]): string {
+  const [forste] = adresser;
+  if (!forste) return "";
+  return `${forste.veg.adressenavn} ${adresser.map(({ husnummer }) => formatHusnummer(husnummer)).join(", ")}`;
+}
+
+export function formatNyHusnummergruppe(adresser: VegadresseDraft[]): string {
+  const nyVeg = adresser[0]?.nyVeg;
+  if (!nyVeg) return "Ikke valgt";
+  const nummer = adresser.map(({ nyttHusnummer, husnummer }) =>
+    formatHusnummer(nyttHusnummer ?? husnummer),
+  );
+  return `${nyVeg.adressenavn} ${nummer.join(", ")}`;
+}
+
 export function grupperPaVeg(vegadresser: VegadresseDraft[]): VegGruppe[] {
   const grupper = new Map<string, VegGruppe>();
   for (const adresse of vegadresser) {
@@ -92,16 +131,14 @@ export function finnVegMedSammeNavn(veg: Veg, kandidater: Veg[]): Veg | undefine
   return kandidater.find((kandidat) => kandidat.adressenavn.toLowerCase() === navn);
 }
 
-const HUSNUMMER = /^(\d+)\s*([a-zæøå]?)$/i;
+const NUMMER = /^\d+$/;
 
-// Tom tekst beholder dagens husnummer. Tekst som ikke er et husnummer gir NaN, som
-// validerVegadresser avviser, slik som for matrikkelnumre.
-function lesHusnummer(tekst: string): Husnummer | undefined {
+// Tom tekst beholder dagens husnummer. Tekst som ikke er et tall gir NaN, som
+// validerVegadresser avviser, slik som for matrikkelnumre. Bokstavene beholdes fra adressene.
+function lesNummer(tekst: string): number | undefined {
   const trimmet = tekst.trim();
   if (!trimmet) return undefined;
-  const treff = HUSNUMMER.exec(trimmet);
-  if (!treff) return { nummer: Number.NaN, bokstav: "" };
-  return { nummer: Number(treff[1]), bokstav: (treff[2] ?? "").toUpperCase() };
+  return NUMMER.test(trimmet) ? Number(trimmet) : Number.NaN;
 }
 
 export type Vegadressevalg = {
@@ -109,9 +146,9 @@ export type Vegadressevalg = {
   heleVeger: ReadonlySet<string>;
   // Nøkkel: vegNokkel. Vegen gjelder alle adressene på vegen i fra kommune.
   veger: ReadonlyMap<string, Veg>;
-  // Nøkkel: vegadresseNokkel. Gir adressen en annen veg enn resten. null er ikke valgt ennå.
+  // Nøkkel: husnummerNokkel. Gir husnummeret en annen veg enn resten. null er ikke valgt ennå.
   egneVeger: ReadonlyMap<string, Veg | null>;
-  // Nøkkel: vegadresseNokkel. Det brukeren har tastet inn.
+  // Nøkkel: husnummerNokkel. Det brukeren har tastet inn.
   husnumre: ReadonlyMap<string, string>;
 };
 
@@ -123,11 +160,13 @@ export function medNyeVegadresser(
     if (valg.heleVeger.has(vegNokkel(adresse))) {
       return { ...adresse, heleVegen: true, nyVeg: adresse.veg };
     }
-    const nokkel = vegadresseNokkel(adresse);
+    const nokkel = husnummerNokkel(adresse);
     const nyVeg = valg.egneVeger.has(nokkel)
       ? (valg.egneVeger.get(nokkel) ?? undefined)
       : valg.veger.get(vegNokkel(adresse));
-    const nyttHusnummer = lesHusnummer(valg.husnumre.get(nokkel) ?? "");
+    const nyttNummer = lesNummer(valg.husnumre.get(nokkel) ?? "");
+    const nyttHusnummer =
+      nyttNummer === undefined ? undefined : { ...adresse.husnummer, nummer: nyttNummer };
     return {
       ...adresse,
       ...(nyVeg && { nyVeg }),
@@ -229,7 +268,7 @@ export function validerVegadresser(
     return nummer !== undefined && !(Number.isInteger(nummer) && nummer > 0);
   });
   if (ugyldig) {
-    return `Nytt husnummer for ${formatVegadresse(ugyldig)} må være et tall, eventuelt med bokstav, for eksempel 12B`;
+    return `Nytt husnummer for ${formatVegadresse(ugyldig)} må være et tall, for eksempel 12`;
   }
 
   const kollisjon = forsteKollisjon(vegadresser, []);

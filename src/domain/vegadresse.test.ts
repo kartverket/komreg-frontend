@@ -3,8 +3,10 @@ import {
   finnKollisjoner,
   finnOpptattVegadresse,
   finnVegMedSammeNavn,
+  formatHusnummergruppe,
   formatNyVegadresse,
   formatVegadresse,
+  grupperPaHusnummer,
   grupperPaVeg,
   lagVegadresseDrafts,
   lagVegadressevalg,
@@ -94,12 +96,25 @@ describe("medNyeVegadresser", () => {
     husnumre: new Map(),
   };
 
-  it("gir alle adressene på vegen den valgte vegen, og tolker husnummer med bokstav", () => {
+  it("gir alle adressene på vegen den valgte vegen, og nytt nummer til alle bokstavene", () => {
+    const medA = { ...vegadresse, husnummer: { nummer: 5, bokstav: "A" } };
     const annen = { ...vegadresse, husnummer: { nummer: 7, bokstav: "" } };
-    const husnumre = new Map([["0301-1234-5", " 12b "]]);
-    expect(medNyeVegadresser([vegadresse, annen], { ...ingenValg, veger, husnumre })).toEqual([
-      { ...flyttet, nyttHusnummer: { nummer: 12, bokstav: "B" } },
-      { ...annen, nyVeg: kirkevegen },
+    const husnumre = new Map([["0301-1234-5", " 12 "]]);
+    expect(medNyeVegadresser([vegadresse, medA, annen], { ...ingenValg, veger, husnumre })).toEqual(
+      [
+        { ...flyttet, nyttHusnummer: { nummer: 12, bokstav: "" } },
+        { ...medA, nyVeg: kirkevegen, nyttHusnummer: { nummer: 12, bokstav: "A" } },
+        { ...annen, nyVeg: kirkevegen },
+      ],
+    );
+  });
+
+  it("gir alle bokstavene på et husnummer den samme egne vegen", () => {
+    const medA = { ...vegadresse, husnummer: { nummer: 5, bokstav: "A" } };
+    const egneVeger = new Map([["0301-1234-5", storgata]]);
+    expect(medNyeVegadresser([vegadresse, medA], { ...ingenValg, veger, egneVeger })).toEqual([
+      { ...vegadresse, nyVeg: storgata },
+      { ...medA, nyVeg: storgata },
     ]);
   });
 
@@ -132,9 +147,22 @@ describe("medNyeVegadresser", () => {
   });
 
   it("gjør tekst som ikke er et husnummer om til NaN", () => {
-    const husnumre = new Map([["0301-1234-5", "tolv"]]);
+    const husnumre = new Map([["0301-1234-5", "12B"]]);
     const [adresse] = medNyeVegadresser([vegadresse], { ...ingenValg, husnumre });
     expect(adresse?.nyttHusnummer?.nummer).toBeNaN();
+  });
+});
+
+describe("grupperPaHusnummer", () => {
+  it("samler bokstavene på samme husnummer", () => {
+    const medA = { ...vegadresse, husnummer: { nummer: 5, bokstav: "A" } };
+    const annen = { ...vegadresse, husnummer: { nummer: 7, bokstav: "" } };
+    const grupper = grupperPaHusnummer([vegadresse, annen, medA]);
+    expect(grupper).toEqual([
+      { nokkel: "0301-1234-5", adresser: [vegadresse, medA] },
+      { nokkel: "0301-1234-7", adresser: [annen] },
+    ]);
+    expect(formatHusnummergruppe(grupper[0]!.adresser)).toBe("Storgata 5, 5A");
   });
 });
 
@@ -205,7 +233,7 @@ describe("validerVegadresser", () => {
   it("avviser husnummer som ikke er positive heltall", () => {
     for (const nummer of [Number.NaN, 0]) {
       const ugyldig = { ...flyttet, nyttHusnummer: { nummer, bokstav: "" } };
-      expect(validerVegadresser([ugyldig], "0301")).toMatch("for eksempel 12B");
+      expect(validerVegadresser([ugyldig], "0301")).toMatch("for eksempel 12");
     }
   });
 
