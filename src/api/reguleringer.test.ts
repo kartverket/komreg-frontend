@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import type { OpprettReguleringRequest } from "@/domain/regulering";
-import { createRegulering, getRegulering, listReguleringer } from "./reguleringer";
+import {
+  createRegulering,
+  getRegulering,
+  listReguleringer,
+  updateRegulering,
+} from "./reguleringer";
 
 const request: OpprettReguleringRequest = {
   navn: "Grensejustering test",
@@ -58,6 +63,20 @@ describe("midlertidig reguleringslager", () => {
         tilKommunenummer: "1508",
       },
     ]);
+  });
+
+  it("endrer en eksisterende regulering", async () => {
+    const id = await createRegulering(request);
+    await createRegulering(request);
+
+    await updateRegulering(id, { ...request, navn: "Nytt navn" });
+
+    await expect(getRegulering(id)).resolves.toEqual({ id, ...request, navn: "Nytt navn" });
+    await expect(getRegulering(2)).resolves.toEqual({ id: 2, ...request });
+  });
+
+  it("feiler når reguleringen som skal endres ikke finnes", async () => {
+    await expect(updateRegulering(404, request)).rejects.toThrow("Fant ikke reguleringen");
   });
 
   it("feiler tydelig når reguleringen ikke finnes", async () => {

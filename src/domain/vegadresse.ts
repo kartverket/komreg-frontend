@@ -129,6 +129,34 @@ export function medNyeVegadresser(
   });
 }
 
+export function utenNyeVegadresser({
+  kommunenummer,
+  veg,
+  husnummer,
+}: VegadresseDraft): VegadresseDraft {
+  return { kommunenummer, veg, husnummer };
+}
+
+// Det omvendte av medNyeVegadresser, for å redigere en lagret regulering. Vegen til den første
+// adressen på en veg blir felles veg, og adresser med en annen veg får egen veg.
+export function lagVegadressevalg(vegadresser: VegadresseDraft[]): Vegadressevalg {
+  const veger = new Map<string, Veg>();
+  const egneVeger = new Map<string, Veg | null>();
+  const husnumre = new Map<string, string>();
+  for (const adresse of vegadresser) {
+    const nokkel = vegadresseNokkel(adresse);
+    if (adresse.nyVeg) {
+      const felles = veger.get(vegNokkel(adresse));
+      if (!felles) veger.set(vegNokkel(adresse), adresse.nyVeg);
+      else if (felles.adressekode !== adresse.nyVeg.adressekode) {
+        egneVeger.set(nokkel, adresse.nyVeg);
+      }
+    }
+    if (adresse.nyttHusnummer) husnumre.set(nokkel, formatHusnummer(adresse.nyttHusnummer));
+  }
+  return { veger, egneVeger, husnumre };
+}
+
 export function nyeAdressekoder(vegadresser: VegadresseDraft[]): number[] {
   return [...new Set(vegadresser.flatMap(({ nyVeg }) => (nyVeg ? [nyVeg.adressekode] : [])))];
 }
