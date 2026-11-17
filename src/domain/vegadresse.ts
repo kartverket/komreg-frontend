@@ -195,7 +195,7 @@ export function lagVegadressevalg(vegadresser: VegadresseDraft[]): Vegadresseval
       heleVeger.add(vegNokkel(adresse));
       continue;
     }
-    const nokkel = vegadresseNokkel(adresse);
+    const nokkel = husnummerNokkel(adresse);
     if (adresse.nyVeg) {
       const felles = veger.get(vegNokkel(adresse));
       if (!felles) veger.set(vegNokkel(adresse), adresse.nyVeg);
@@ -203,7 +203,7 @@ export function lagVegadressevalg(vegadresser: VegadresseDraft[]): Vegadresseval
         egneVeger.set(nokkel, adresse.nyVeg);
       }
     }
-    if (adresse.nyttHusnummer) husnumre.set(nokkel, formatHusnummer(adresse.nyttHusnummer));
+    if (adresse.nyttHusnummer) husnumre.set(nokkel, String(adresse.nyttHusnummer.nummer));
   }
   return { heleVeger, veger, egneVeger, husnumre };
 }

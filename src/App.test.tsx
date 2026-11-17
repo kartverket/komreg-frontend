@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Teig } from "./types/TeigResponse";
-import { createRegulering, REGULERINGER_STORAGE_KEY } from "./api/reguleringer";
+import { createRegulering } from "./api/reguleringer";
 import type { OpprettReguleringRequest } from "./domain/regulering";
 import { useMatrikkelenheter } from "./hooks/useMatrikkelenheter";
 import { App } from "./App";
@@ -19,7 +19,16 @@ vi.mock("./api/reguleringer", () => ({
     lagrede.liste.push(request);
     return Promise.resolve(lagrede.liste.length);
   },
-  getRegulering: (id: number) => Promise.resolve({ id, ...lagrede.liste[id - 1] }),
+  updateRegulering: (id: number, request: OpprettReguleringRequest) => {
+    if (!lagrede.liste[id - 1]) return Promise.reject(new Error("Fant ikke reguleringen"));
+    lagrede.liste[id - 1] = request;
+    return Promise.resolve();
+  },
+  getRegulering: (id: number) => {
+    const regulering = lagrede.liste[id - 1];
+    if (!regulering) return Promise.reject(new Error("Fant ikke reguleringen"));
+    return Promise.resolve({ id, ...regulering });
+  },
   listReguleringer: () =>
     Promise.resolve(
       lagrede.liste.map((r, i) => ({
@@ -420,7 +429,7 @@ describe("App", () => {
       await screen.findByRole("heading", { level: 1, name: "Endret regulering" }),
     ).toBeVisible();
     expect(screen.getByRole("cell", { name: "7/1" })).toBeVisible();
-    expect(JSON.parse(localStorage.getItem(REGULERINGER_STORAGE_KEY) ?? "[]")).toHaveLength(1);
+    expect(lagrede.liste).toHaveLength(1);
   });
 
   it("keeps the chosen veg and husnummer when editing, and accepts a new husnummer", async () => {
@@ -435,7 +444,7 @@ describe("App", () => {
             veg: { adressekode: 1234, adressenavn: "Storgata" },
             husnummer: { nummer: 5, bokstav: "" },
             nyVeg: { adressekode: 9999, adressenavn: "Storgata" },
-            nyttHusnummer: { nummer: 5, bokstav: "B" },
+            nyttHusnummer: { nummer: 5, bokstav: "" },
           },
         ],
       },
@@ -443,7 +452,7 @@ describe("App", () => {
     renderAt(`/reguleringer/${id}/rediger`);
 
     const husnummer = await screen.findByRole("textbox", { name: "Nytt husnummer for Storgata 5" });
-    expect(husnummer).toHaveValue("5B");
+    expect(husnummer).toHaveValue("5");
     expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
 
     await userEvent.clear(husnummer);
@@ -465,9 +474,7 @@ describe("App", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Fra og til kommune må være forskjellige",
     );
-    expect(JSON.parse(localStorage.getItem(REGULERINGER_STORAGE_KEY) ?? "[]")).toEqual([
-      { id, ...lagretRegulering },
-    ]);
+    expect(lagrede.liste).toEqual([lagretRegulering]);
   });
 
   it("opens the edit page from the regulation details and goes back on cancel", async () => {

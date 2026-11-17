@@ -33,13 +33,26 @@ describe("lagVegadressevalg", () => {
 
   it("gjør en lagret flytting om til valg som gir samme adresser tilbake", () => {
     const lagret = [
-      { ...flyttet, nyttHusnummer: { nummer: 5, bokstav: "B" } },
+      { ...flyttet, nyttHusnummer: { nummer: 6, bokstav: "" } },
       { ...nesteAdresse, nyVeg: kirkevegen },
     ];
 
     const valg = lagVegadressevalg(lagret);
 
-    expect(valg.husnumre.get("0301-1234-5")).toBe("5B");
+    expect(valg.husnumre.get("0301-1234-5")).toBe("6");
+    expect(medNyeVegadresser(lagret.map(utenNyeVegadresser), valg)).toEqual(lagret);
+  });
+
+  it("gir bokstavadresser på samme husnummer samme nye nummer", () => {
+    const lagret = ["A", "B"].map((bokstav) => ({
+      ...flyttet,
+      husnummer: { nummer: 5, bokstav },
+      nyttHusnummer: { nummer: 6, bokstav },
+    }));
+
+    const valg = lagVegadressevalg(lagret);
+
+    expect(valg.husnumre.get("0301-1234-5")).toBe("6");
     expect(medNyeVegadresser(lagret.map(utenNyeVegadresser), valg)).toEqual(lagret);
   });
 

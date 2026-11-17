@@ -6,32 +6,8 @@ import type {
 } from "@/domain/regulering";
 import type { ReformSpec } from "@/types/ReformSpec";
 
-export const REGULERINGER_STORAGE_KEY = "komreg:reguleringer:v1";
-
-// TODO: Dette må byttes ut når regulerings apiet er klart.
-// Viba opp en localstorage "mock" inntil videre,
-// skal bare være å bytte ut dette direkte uten å måtte røre noe annet
-
-function read(): ReguleringDetail[] {
-  const stored = localStorage.getItem(REGULERINGER_STORAGE_KEY);
-  if (!stored) return [];
-  try {
-    return JSON.parse(stored) as ReguleringDetail[];
-  } catch {
-    throw new Error("Lokalt lagrede reguleringer kunne ikke leses");
-  }
-}
-
-function write(reguleringer: ReguleringDetail[]) {
-  try {
-    localStorage.setItem(REGULERINGER_STORAGE_KEY, JSON.stringify(reguleringer));
-  } catch {
-    throw new Error("Reguleringen kunne ikke lagres på serveren");
-  }
-}
 export async function createRegulering(request: OpprettReguleringRequest): Promise<number> {
   const reformSpec = tilReformSpec(request);
-  //const id = Math.max(0, ...reguleringer.map((item) => item.id)) + 1;
 
   try {
     const res = await fetch(new URL("/api/regulering/api/reguleringer", window.location.origin), {
@@ -53,9 +29,23 @@ export async function updateRegulering(
   id: number,
   request: OpprettReguleringRequest,
 ): Promise<void> {
-  const reguleringer = read();
-  if (!reguleringer.some((item) => item.id === id)) throw new Error("Fant ikke reguleringen");
-  write(reguleringer.map((item) => (item.id === id ? { id, ...request } : item)));
+  const reformSpec = tilReformSpec(request);
+  let res: Response;
+  try {
+    res = await fetch(new URL(`/api/regulering/api/reguleringer/${id}`, window.location.origin), {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(reformSpec),
+    });
+  } catch {
+    throw new Error("Reguleringen kunne ikke lagres på serveren");
+  }
+  if (!res.ok) {
+    if (res.status === 404) throw new Error("Fant ikke reguleringen");
+    throw new Error("Reguleringen kunne ikke lagres på serveren");
+  }
 }
 
 export async function listReguleringer(): Promise<ReguleringSummary[]> {
@@ -77,14 +67,14 @@ export async function listReguleringer(): Promise<ReguleringSummary[]> {
 }
 
 export async function getRegulering(id: number): Promise<ReguleringDetail> {
+  let res: Response;
   try {
-    const res = await fetch(
-      new URL(`/api/regulering/api/reguleringer/${id}`, window.location.origin),
-    );
-    if (!res.ok) throw new Error("Fant ikke reguleringen");
-    const data = (await res.json()) as ReformSpec;
-    return fraReformSpec(id, data);
+    res = await fetch(new URL(`/api/regulering/api/reguleringer/${id}`, window.location.origin));
   } catch {
     throw new Error("Reguleringen kunne ikke hentes fra serveren");
   }
+  if (res.status === 404) throw new Error("Fant ikke reguleringen");
+  if (!res.ok) throw new Error("Reguleringen kunne ikke hentes fra serveren");
+  const data = (await res.json()) as ReformSpec;
+  return fraReformSpec(id, data);
 }
