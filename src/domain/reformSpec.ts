@@ -1,4 +1,13 @@
-import type { Kind, KeySpec, MoveOp, OpSpec, PathSpec, ReformSpec } from "@/types/ReformSpec";
+import type {
+  AdjustOp,
+  Kind,
+  KeySpec,
+  MoveOp,
+  OpSpec,
+  PathSpec,
+  ReformSpec,
+  Segment,
+} from "@/types/ReformSpec";
 import {
   nyttMatrikkelnummer,
   type GrensejusteringDraft,
@@ -12,43 +21,40 @@ function kommuneNokkel(kommunenummer: string): [string, string] {
   return [kommunenummer.slice(0, 2), kommunenummer.slice(2)];
 }
 
+function segmenter(key: PathSpec): Segment[] {
+  return Array.isArray(key) ? key : [key];
+}
+
+// En grensejustering er én `adjust` av fra kommune. Kommunen står i ro, og flyttingene under den
+// har pivoter relativt til kommunen. Målene (`to`) er alltid fulle nøkler fra roten.
 // Bokstaven på et husnummer kan ikke uttrykkes i formatet, siden `addressNumber` bare er et tall.
 // Adresser med samme nummer og ulik bokstav flyttes derfor samlet.
-export function tilReformSpec({
-  navn,
-  dato,
-  grensejustering,
-}: OpprettReguleringRequest): ReformSpec {
-  const fra = kommuneNokkel(grensejustering.fraKommunenummer);
+function tilAdjust(grensejustering: GrensejusteringDraft): AdjustOp {
   const til = kommuneNokkel(grensejustering.tilKommunenummer);
-  const operasjoner: OpSpec[] = [];
+  const then: MoveOp[] = [];
 
   for (const enhet of grensejustering.matrikkelenheter) {
     const nytt = nyttMatrikkelnummer(enhet);
     const hel = enhet.bruksnummer === null || nytt.bruksnummer === null;
-    const op: MoveOp = hel
-      ? {
-          op: "move",
-          kind: "landNumber",
-          key: [...fra, enhet.gardsnummer],
-          to: [...til, nytt.gardsnummer],
-        }
-      : {
-          op: "move",
-          kind: "titleNumber",
-          key: [...fra, enhet.gardsnummer, enhet.bruksnummer!],
-          to: [...til, nytt.gardsnummer, nytt.bruksnummer!],
-        };
-    operasjoner.push(op);
+    then.push(
+      hel
+        ? {
+            op: "move",
+            kind: "landNumber",
+            key: enhet.gardsnummer,
+            to: [...til, nytt.gardsnummer],
+          }
+        : {
+            op: "move",
+            kind: "titleNumber",
+            key: [enhet.gardsnummer, enhet.bruksnummer!],
+            to: [...til, nytt.gardsnummer, nytt.bruksnummer!],
+          },
+    );
   }
 
   for (const teig of grensejustering.teiger) {
-    operasjoner.push({
-      op: "move",
-      kind: "parcel",
-      key: [...fra, teig.teigId],
-      to: [...til, teig.teigId],
-    });
+    then.push({ op: "move", kind: "parcel", key: teig.teigId, to: [...til, teig.teigId] });
   }
 
   const flyttedeVeger = new Set<number>();
@@ -58,15 +64,15 @@ export function tilReformSpec({
       // Hver adresse på vegen gir en egen draft, men vegen skal bare flyttes én gang.
       if (flyttedeVeger.has(veg.adressekode)) continue;
       flyttedeVeger.add(veg.adressekode);
-      operasjoner.push({
+      then.push({
         op: "move",
         kind: "addressCode",
-        key: [...fra, veg.adressekode],
+        key: veg.adressekode,
         to: [...til, veg.adressekode],
       });
       continue;
     }
-    const key = [...fra, veg.adressekode, husnummer.nummer];
+    const key = [veg.adressekode, husnummer.nummer];
     const to = [...til, (nyVeg ?? veg).adressekode, (nyttHusnummer ?? husnummer).nummer];
     // Bokstavene på et husnummer (8A, 8B, 8C) er én flytting, siden formatet bare har nummeret.
     const nokkel = key.join("-");
@@ -74,10 +80,24 @@ export function tilReformSpec({
     if (forrigeMal === undefined) flyttedeHusnumre.set(nokkel, to.join("-"));
     else if (forrigeMal === to.join("-")) continue;
     else throw new Error("Adresser med samme husnummer må flyttes samlet, uavhengig av bokstav");
-    operasjoner.push({ op: "move", kind: "addressNumber", key, to });
+    then.push({ op: "move", kind: "addressNumber", key, to });
   }
 
-  return { navn, ikrafttredelse: dato, operasjoner };
+  return {
+    op: "adjust",
+    kind: "municipality",
+    key: kommuneNokkel(grensejustering.fraKommunenummer),
+    // eslint-disable-next-line unicorn/no-thenable -- `then` er feltnavnet i reform-formatet.
+    then,
+  };
+}
+
+export function tilReformSpec({
+  navn,
+  dato,
+  grensejusteringer,
+}: OpprettReguleringRequest): ReformSpec {
+  return { navn, ikrafttredelse: dato, operasjoner: grensejusteringer.map(tilAdjust) };
 }
 
 const STOTTEDE_KINDS: Kind[] = [
@@ -88,71 +108,73 @@ const STOTTEDE_KINDS: Kind[] = [
   "addressNumber",
 ];
 
-function kommunenummer(nokkel: KeySpec | PathSpec): string {
-  const [fylke, kommune] = Array.isArray(nokkel) ? nokkel : [];
+function kommunenummer([fylke, kommune]: KeySpec): string {
   return `${fylke}${kommune}`;
 }
 
 // Specen har bare adressekoden, så navnet vises som koden.
-function vegFraKode(adressekode: string | number | undefined): Veg {
+function vegFraKode(adressekode: Segment | undefined): Veg {
   return { adressekode: Number(adressekode), adressenavn: `Adressekode ${adressekode}` };
 }
 
-// Støtter bare `move`-operasjonene på rotnivå, som er det tilReformSpec lager, og kaster på alt annet
-// i stedet for å vise en ufullstendig reform. Specen har ikke
-// teig-IDene til matrikkelenhetene, adressenavn, husnummerbokstaver eller adressene på en veg som
-// flyttes hel (`addressCode`), så de blir tomme eller får en plassholder.
-export function fraReformSpec(id: number, spec: ReformSpec): ReguleringDetail {
+// Støtter bare det tilAdjust lager: en `adjust` av en kommune med enkle `move` under, alle til
+// samme kommune. Kaster på alt annet i stedet for å vise en ufullstendig grensejustering.
+function fraAdjust(op: OpSpec): GrensejusteringDraft {
+  if (op.op !== "adjust" || op.kind !== "municipality" || !Array.isArray(op.key)) {
+    throw new Error(
+      `Ikke implementert: støtter bare "adjust" av en kommune, ikke "${op.op}" av "${op.kind}"`,
+    );
+  }
+  const fra = kommunenummer(op.key);
   const grensejustering: GrensejusteringDraft = {
-    fraKommunenummer: "",
+    fraKommunenummer: fra,
     tilKommunenummer: "",
     matrikkelenheter: [],
     teiger: [],
     vegadresser: [],
   };
 
-  for (const op of spec.operasjoner) {
-    if (op.op !== "move" || !Array.isArray(op.key) || op.then?.length) {
-      throw new Error(`Ikke implementert: støtter bare enkle flyttinger, ikke "${op.op}"`);
+  for (const barn of op.then ?? []) {
+    if (barn.op !== "move" || barn.then?.length) {
+      throw new Error(`Ikke implementert: støtter bare enkle flyttinger, ikke "${barn.op}"`);
     }
-    if (!STOTTEDE_KINDS.includes(op.kind)) {
-      throw new Error(`Ikke implementert: flytting av "${op.kind}"`);
+    if (!STOTTEDE_KINDS.includes(barn.kind)) {
+      throw new Error(`Ikke implementert: flytting av "${barn.kind}"`);
     }
-    const key = op.key;
-    const fra = kommunenummer(key);
-    const til = kommunenummer(op.to);
-    grensejustering.fraKommunenummer ||= fra;
+    const til = kommunenummer(barn.to);
     grensejustering.tilKommunenummer ||= til;
-    if (fra !== grensejustering.fraKommunenummer || til !== grensejustering.tilKommunenummer) {
-      throw new Error("Ikke implementert: støtter bare flytting mellom to kommuner");
+    if (til !== grensejustering.tilKommunenummer) {
+      throw new Error("Ikke implementert: en grensejustering kan bare flytte til én kommune");
     }
+    const key = segmenter(barn.key);
+    const [, , ...mal] = barn.to;
 
-    if (op.kind === "landNumber" || op.kind === "titleNumber") {
-      const [, , gardsnummer, bruksnummer] = key;
-      const [, , nyGardsnummer, nyBruksnummer] = op.to;
+    if (barn.kind === "landNumber" || barn.kind === "titleNumber") {
+      const [gardsnummer, bruksnummer] = key;
+      const [nyGardsnummer, nyBruksnummer] = mal;
       grensejustering.matrikkelenheter.push({
         kommunenummer: fra,
         gardsnummer: Number(gardsnummer),
-        bruksnummer: op.kind === "landNumber" ? null : Number(bruksnummer),
+        bruksnummer: barn.kind === "landNumber" ? null : Number(bruksnummer),
         teigIder: [],
         ...(nyGardsnummer !== gardsnummer && { nyGardsnummer: Number(nyGardsnummer) }),
-        ...(op.kind === "titleNumber" &&
+        ...(barn.kind === "titleNumber" &&
           nyBruksnummer !== bruksnummer && { nyBruksnummer: Number(nyBruksnummer) }),
       });
-    } else if (op.kind === "parcel") {
-      grensejustering.teiger.push({ kommunenummer: fra, teigId: Number(key[2]) });
-    } else if (op.kind === "addressCode") {
+    } else if (barn.kind === "parcel") {
+      grensejustering.teiger.push({ kommunenummer: fra, teigId: Number(key[0]) });
+    } else if (barn.kind === "addressCode") {
       // Adressene på vegen er ikke i specen. Husnummeret er en plassholder, `heleVegen` er det som gjelder.
       grensejustering.vegadresser.push({
         kommunenummer: fra,
-        veg: vegFraKode(key[2]),
+        veg: vegFraKode(key[0]),
         husnummer: { nummer: 0, bokstav: "" },
-        nyVeg: vegFraKode(op.to[2]),
+        nyVeg: vegFraKode(mal[0]),
         heleVegen: true,
       });
-    } else if (op.kind === "addressNumber") {
-      const [, , adressekode, nummer] = key;
-      const [, , nyAdressekode, nyttNummer] = op.to;
+    } else if (barn.kind === "addressNumber") {
+      const [adressekode, nummer] = key;
+      const [nyAdressekode, nyttNummer] = mal;
       grensejustering.vegadresser.push({
         kommunenummer: fra,
         veg: vegFraKode(adressekode),
@@ -165,5 +187,17 @@ export function fraReformSpec(id: number, spec: ReformSpec): ReguleringDetail {
     }
   }
 
-  return { id, navn: spec.navn, dato: spec.ikrafttredelse, grensejustering };
+  return grensejustering;
+}
+
+// Hver `adjust` på rotnivå er én grensejustering. Specen har ikke teig-IDene til
+// matrikkelenhetene, adressenavn, husnummerbokstaver eller adressene på en veg som flyttes hel
+// (`addressCode`), så de blir tomme eller får en plassholder.
+export function fraReformSpec(id: number, spec: ReformSpec): ReguleringDetail {
+  return {
+    id,
+    navn: spec.navn,
+    dato: spec.ikrafttredelse,
+    grensejusteringer: spec.operasjoner.map(fraAdjust),
+  };
 }

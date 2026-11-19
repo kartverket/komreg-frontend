@@ -25,5 +25,5 @@ export function useRegulering(reguleringId: string | undefined) {
     };
   }, [id, validId]);
 
-  return { id, regulering, error };
+  return { id, regulering, error, setRegulering };
 }

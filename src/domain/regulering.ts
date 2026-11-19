@@ -39,10 +39,21 @@ export type GrensejusteringDraft = {
   vegadresser: VegadresseDraft[];
 };
 
+// En regulering er hele reformen. Grensejusteringene i den er uavhengige av hverandre, og hver av
+// dem er én `adjust` av fra kommune i specen.
 export type OpprettReguleringRequest = {
   navn: string;
   dato: string;
+  grensejusteringer: GrensejusteringDraft[];
+};
+
+// Det skjemaet lagrer: én grensejustering. Navn og dato brukes bare når en ny regulering
+// opprettes, og ID-en bare når grensejusteringen legges til i en eksisterende regulering.
+export type GrensejusteringLagring = {
+  navn: string;
+  dato: string;
   grensejustering: GrensejusteringDraft;
+  eksisterendeReguleringId?: number;
 };
 
 export type ReguleringSummary = {
@@ -57,7 +68,7 @@ export type ReguleringDetail = {
   id: number;
   navn: string;
   dato: string;
-  grensejustering: GrensejusteringDraft;
+  grensejusteringer: GrensejusteringDraft[];
 };
 
 // Det som er valgt i kartet, uten det brukeren har fylt inn i skjemaet.
@@ -177,12 +188,26 @@ function lagNyeNumreInput(
   return nyeNumre;
 }
 
-// Deler en lagret regulering i det som er valgt og det som er fylt inn, slik skjemaet har dem
-// når reguleringen opprettes.
-export function lagRedigering({ navn, dato, grensejustering }: ReguleringDetail): {
-  grunnlag: Grunnlag;
-  startverdier: Startverdier;
-} {
+// Legger grensejusteringen til i reguleringen, eller erstatter den på `indeks`. De andre
+// grensejusteringene beholdes som de er.
+export function medGrensejustering(
+  { navn, dato, grensejusteringer }: Omit<ReguleringDetail, "id">,
+  grensejustering: GrensejusteringDraft,
+  indeks = grensejusteringer.length,
+): OpprettReguleringRequest {
+  const neste = [...grensejusteringer];
+  neste[indeks] = grensejustering;
+  return { navn, dato, grensejusteringer: neste };
+}
+
+// Deler en lagret grensejustering i det som er valgt og det som er fylt inn, slik skjemaet har dem
+// når grensejusteringen opprettes. Null når reguleringen ikke har en grensejustering på `indeks`.
+export function lagRedigering(
+  { navn, dato, grensejusteringer }: ReguleringDetail,
+  indeks: number,
+): { grunnlag: Grunnlag; startverdier: Startverdier } | null {
+  const grensejustering = grensejusteringer[indeks];
+  if (!grensejustering) return null;
   return {
     grunnlag: {
       matrikkelenheter: grensejustering.matrikkelenheter.map(utenNyttMatrikkelnummer),

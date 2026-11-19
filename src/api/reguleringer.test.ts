@@ -11,28 +11,30 @@ import {
 const request: OpprettReguleringRequest = {
   navn: "Grensejustering test",
   dato: "2026-10-21",
-  grensejustering: {
-    fraKommunenummer: "1525",
-    tilKommunenummer: "1508",
-    matrikkelenheter: [
-      {
-        kommunenummer: "1525",
-        gardsnummer: 12,
-        bruksnummer: 4,
-        teigIder: [10, 11],
-      },
-    ],
-    teiger: [{ kommunenummer: "1525", teigId: 12 }],
-    vegadresser: [
-      {
-        kommunenummer: "1525",
-        veg: { adressekode: 1234, adressenavn: "Storgata" },
-        husnummer: { nummer: 5, bokstav: "A" },
-        nyVeg: { adressekode: 5678, adressenavn: "Kirkevegen" },
-        nyttHusnummer: { nummer: 7, bokstav: "" },
-      },
-    ],
-  },
+  grensejusteringer: [
+    {
+      fraKommunenummer: "1525",
+      tilKommunenummer: "1508",
+      matrikkelenheter: [
+        {
+          kommunenummer: "1525",
+          gardsnummer: 12,
+          bruksnummer: 4,
+          teigIder: [10, 11],
+        },
+      ],
+      teiger: [{ kommunenummer: "1525", teigId: 12 }],
+      vegadresser: [
+        {
+          kommunenummer: "1525",
+          veg: { adressekode: 1234, adressenavn: "Storgata" },
+          husnummer: { nummer: 5, bokstav: "A" },
+          nyVeg: { adressekode: 5678, adressenavn: "Kirkevegen" },
+          nyttHusnummer: { nummer: 7, bokstav: "" },
+        },
+      ],
+    },
+  ],
 };
 
 function mockFetch(body: unknown, ok = true, status = 200) {
