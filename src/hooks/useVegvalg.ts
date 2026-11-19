@@ -22,6 +22,7 @@ type Vegvalg = Vegadressevalg & {
 function tomtVegvalg(tilKommunenummer: string): Vegvalg {
   return {
     tilKommunenummer,
+    heleVeger: new Set(),
     veger: new Map(),
     egneVeger: new Map(),
     husnumre: new Map(),
@@ -101,6 +102,17 @@ export function useVegvalg(
     if (veg) hentEksisterende(tilKommunenummer, veg);
   }
 
+  function flyttHeleVegen(nokkel: string, veg: Veg, hel: boolean) {
+    const { tilKommunenummer } = vegvalg;
+    oppdater(tilKommunenummer, (forrige) => {
+      const heleVeger = new Set(forrige.heleVeger);
+      if (hel) heleVeger.add(nokkel);
+      else heleVeger.delete(nokkel);
+      return { ...forrige, heleVeger };
+    });
+    if (hel) hentEksisterende(tilKommunenummer, veg);
+  }
+
   function endreHusnummer(nokkel: string, husnummer: string) {
     oppdater(vegvalg.tilKommunenummer, (forrige) => ({
       ...forrige,
@@ -144,10 +156,12 @@ export function useVegvalg(
     grupper: grupperPaVeg(vegadresser),
     tilKommunenummer: vegvalg.tilKommunenummer,
     valgtVeg: (nokkel: string) => vegvalg.veger.get(nokkel),
+    flyttesHeleVegen: (nokkel: string) => vegvalg.heleVeger.has(nokkel),
     harEgenVeg: (nokkel: string) => vegvalg.egneVeger.has(nokkel),
     husnummer: (nokkel: string) => vegvalg.husnumre.get(nokkel) ?? "",
     status,
     velgVeg,
+    flyttHeleVegen,
     brukEgenVeg,
     velgEgenVeg,
     endreHusnummer,

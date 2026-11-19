@@ -21,6 +21,8 @@ export type VegadresseDraft = {
   nyVeg?: Veg;
   // Undefined beholder dagens nummer og bokstav.
   nyttHusnummer?: Husnummer;
+  // Hele vegen flyttes til til kommune og beholder adressekoden. Adressene følger med uendret.
+  heleVegen?: boolean;
 };
 
 // Adressene på én veg i fra kommune. De flyttes til samme veg i til kommune.
@@ -103,6 +105,8 @@ function lesHusnummer(tekst: string): Husnummer | undefined {
 }
 
 export type Vegadressevalg = {
+  // Nøkkel: vegNokkel. Hele vegen flyttes, så ingen veg i til kommune velges.
+  heleVeger: ReadonlySet<string>;
   // Nøkkel: vegNokkel. Vegen gjelder alle adressene på vegen i fra kommune.
   veger: ReadonlyMap<string, Veg>;
   // Nøkkel: vegadresseNokkel. Gir adressen en annen veg enn resten. null er ikke valgt ennå.
@@ -116,6 +120,9 @@ export function medNyeVegadresser(
   valg: Vegadressevalg,
 ): VegadresseDraft[] {
   return vegadresser.map((adresse) => {
+    if (valg.heleVeger.has(vegNokkel(adresse))) {
+      return { ...adresse, heleVegen: true, nyVeg: adresse.veg };
+    }
     const nokkel = vegadresseNokkel(adresse);
     const nyVeg = valg.egneVeger.has(nokkel)
       ? (valg.egneVeger.get(nokkel) ?? undefined)
@@ -140,11 +147,16 @@ export function utenNyeVegadresser({
 // Det omvendte av medNyeVegadresser, for å redigere en lagret regulering. Vegen til den første
 // adressen på en veg blir felles veg, og adresser med en annen veg får egen veg.
 export function lagVegadressevalg(vegadresser: VegadresseDraft[]): Vegadressevalg {
+  const heleVeger = new Set<string>();
   const veger = new Map<string, Veg>();
   const egneVeger = new Map<string, Veg | null>();
   const husnumre = new Map<string, string>();
   for (const adresse of vegadresser) {
     const nokkel = vegadresseNokkel(adresse);
+    if (adresse.heleVegen) {
+      heleVeger.add(vegNokkel(adresse));
+      continue;
+    }
     if (adresse.nyVeg) {
       const felles = veger.get(vegNokkel(adresse));
       if (!felles) veger.set(vegNokkel(adresse), adresse.nyVeg);
@@ -154,7 +166,7 @@ export function lagVegadressevalg(vegadresser: VegadresseDraft[]): Vegadresseval
     }
     if (adresse.nyttHusnummer) husnumre.set(nokkel, formatHusnummer(adresse.nyttHusnummer));
   }
-  return { veger, egneVeger, husnumre };
+  return { heleVeger, veger, egneVeger, husnumre };
 }
 
 export function nyeAdressekoder(vegadresser: VegadresseDraft[]): number[] {
