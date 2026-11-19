@@ -1,45 +1,43 @@
 import { Button, Heading, Paragraph, Table } from "@kv-designsystem/react";
 import { Link as RouterLink, useParams } from "@tanstack/react-router";
 import { BackButton } from "@/components/BackButton/BackButton";
-import { formatMatrikkelnummer, formatNyttMatrikkelnummer } from "@/domain/regulering";
+import { formatMatrikkelnummer, formatNyttMatrikkelnummer } from "@/domain/grensejustering";
 import { formatNyVegadresse, formatVegadresse, vegadresseNokkel } from "@/domain/vegadresse";
-import { useRegulering } from "@/hooks/useRegulering";
+import { useGrensejustering } from "@/hooks/useGrensejustering";
 
-export function ReguleringDetail() {
-  const { reguleringId } = useParams({ strict: false });
-  const { id, regulering, error } = useRegulering(reguleringId);
+export function GrensejusteringDetail() {
+  const { grensejusteringId } = useParams({ strict: false });
+  const { id, grensejustering, error } = useGrensejustering(grensejusteringId);
 
   return (
     <>
-      <BackButton to="/reguleringer">Tilbake til reguleringer</BackButton>
+      <BackButton to="/grensejusteringer">Tilbake til grensejusteringer</BackButton>
       {error ? (
         <Paragraph className="form-error" role="alert">
           {error}
         </Paragraph>
-      ) : !regulering ? (
-        <Paragraph>Henter regulering…</Paragraph>
+      ) : !grensejustering ? (
+        <Paragraph>Henter grensejustering…</Paragraph>
       ) : (
         <>
           <Heading level={1} data-size="lg">
-            {regulering.navn}
+            {grensejustering.navn}
           </Heading>
-          <Paragraph>Ikrafttredelse: {regulering.dato}</Paragraph>
           <Paragraph>
-            {regulering.grensejustering.fraKommunenummer} →{" "}
-            {regulering.grensejustering.tilKommunenummer}
+            {grensejustering.fraKommunenummer} → {grensejustering.tilKommunenummer}
           </Paragraph>
           <Button asChild variant="secondary">
             <RouterLink
-              to="/reguleringer/$reguleringId/rediger"
-              params={{ reguleringId: String(id) }}
+              to="/grensejusteringer/$grensejusteringId/rediger"
+              params={{ grensejusteringId: String(id) }}
             >
-              Rediger regulering
+              Rediger grensejustering
             </RouterLink>
           </Button>
           <Heading level={2} data-size="sm">
             Matrikkelenheter
           </Heading>
-          <div className="regulering-table-wrapper">
+          <div className="grensejustering-table-wrapper">
             <Table data-size="sm" zebra>
               <Table.Head>
                 <Table.Row>
@@ -50,7 +48,7 @@ export function ReguleringDetail() {
                 </Table.Row>
               </Table.Head>
               <Table.Body>
-                {regulering.grensejustering.matrikkelenheter.map((item) => (
+                {grensejustering.matrikkelenheter.map((item) => (
                   <Table.Row key={formatMatrikkelnummer(item)}>
                     <Table.Cell>{item.gardsnummer}</Table.Cell>
                     <Table.Cell>{item.bruksnummer ?? "Hele gårdsnummeret"}</Table.Cell>
@@ -61,12 +59,12 @@ export function ReguleringDetail() {
               </Table.Body>
             </Table>
           </div>
-          {regulering.grensejustering.teiger.length > 0 && (
+          {grensejustering.teiger.length > 0 && (
             <>
               <Heading level={2} data-size="sm">
                 Teiger uten matrikkelnummer
               </Heading>
-              <div className="regulering-table-wrapper">
+              <div className="grensejustering-table-wrapper">
                 <Table data-size="sm" zebra>
                   <Table.Head>
                     <Table.Row>
@@ -74,7 +72,7 @@ export function ReguleringDetail() {
                     </Table.Row>
                   </Table.Head>
                   <Table.Body>
-                    {regulering.grensejustering.teiger.map((teig) => (
+                    {grensejustering.teiger.map((teig) => (
                       <Table.Row key={teig.teigId}>
                         <Table.Cell>{teig.teigId}</Table.Cell>
                       </Table.Row>
@@ -84,12 +82,12 @@ export function ReguleringDetail() {
               </div>
             </>
           )}
-          {regulering.grensejustering.vegadresser.length > 0 && (
+          {grensejustering.vegadresser.length > 0 && (
             <>
               <Heading level={2} data-size="sm">
                 Vegadresser
               </Heading>
-              <div className="regulering-table-wrapper">
+              <div className="grensejustering-table-wrapper">
                 <Table data-size="sm" zebra>
                   <Table.Head>
                     <Table.Row>
@@ -99,7 +97,7 @@ export function ReguleringDetail() {
                     </Table.Row>
                   </Table.Head>
                   <Table.Body>
-                    {regulering.grensejustering.vegadresser.map((adresse) => (
+                    {grensejustering.vegadresser.map((adresse) => (
                       <Table.Row key={vegadresseNokkel(adresse)}>
                         <Table.Cell>{formatVegadresse(adresse)}</Table.Cell>
                         <Table.Cell>{formatNyVegadresse(adresse)}</Table.Cell>

@@ -2,9 +2,9 @@ import type { Kind, KeySpec, MoveOp, OpSpec, PathSpec, ReformSpec } from "@/type
 import {
   nyttMatrikkelnummer,
   type GrensejusteringDraft,
-  type OpprettReguleringRequest,
-  type ReguleringDetail,
-} from "./regulering";
+  type OpprettGrensejusteringRequest,
+  type GrensejusteringDetail,
+} from "./grensejustering";
 import type { Veg } from "./vegadresse";
 
 // Kommunenummeret er fylke (2 siffer) og løpenummer (2 siffer) sammen.
@@ -16,9 +16,8 @@ function kommuneNokkel(kommunenummer: string): [string, string] {
 // Adresser med samme nummer og ulik bokstav flyttes derfor samlet.
 export function tilReformSpec({
   navn,
-  dato,
-  grensejustering,
-}: OpprettReguleringRequest): ReformSpec {
+  ...grensejustering
+}: OpprettGrensejusteringRequest): ReformSpec {
   const fra = kommuneNokkel(grensejustering.fraKommunenummer);
   const til = kommuneNokkel(grensejustering.tilKommunenummer);
   const operasjoner: OpSpec[] = [];
@@ -77,7 +76,9 @@ export function tilReformSpec({
     operasjoner.push({ op: "move", kind: "addressNumber", key, to });
   }
 
-  return { navn, ikrafttredelse: dato, operasjoner };
+  // TODO: Ikrafttredelsesdatoen hører til reguleringen, ikke grensejusteringen. Sendes tom til
+  // backend støtter grensejusteringer uten dato.
+  return { navn, ikrafttredelse: "", operasjoner };
 }
 
 const STOTTEDE_KINDS: Kind[] = [
@@ -102,7 +103,7 @@ function vegFraKode(adressekode: string | number | undefined): Veg {
 // i stedet for å vise en ufullstendig reform. Specen har ikke
 // teig-IDene til matrikkelenhetene, adressenavn, husnummerbokstaver eller adressene på en veg som
 // flyttes hel (`addressCode`), så de blir tomme eller får en plassholder.
-export function fraReformSpec(id: number, spec: ReformSpec): ReguleringDetail {
+export function fraReformSpec(id: number, spec: ReformSpec): GrensejusteringDetail {
   const grensejustering: GrensejusteringDraft = {
     fraKommunenummer: "",
     tilKommunenummer: "",
@@ -165,5 +166,5 @@ export function fraReformSpec(id: number, spec: ReformSpec): ReguleringDetail {
     }
   }
 
-  return { id, navn: spec.navn, dato: spec.ikrafttredelse, grensejustering };
+  return { id, navn: spec.navn, ...grensejustering };
 }

@@ -1,12 +1,12 @@
 import { Button, Heading, Paragraph } from "@kv-designsystem/react";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
-import { createRegulering } from "@/api/reguleringer";
-import { lagMatrikkelenhetDraft, lagTeigDraft } from "@/domain/regulering";
+import { createGrensejustering } from "@/api/grensejusteringer";
+import { lagMatrikkelenhetDraft, lagTeigDraft } from "@/domain/grensejustering";
 import { lagVegadresseDrafts } from "@/domain/vegadresse";
 import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
-import { ReguleringSkjema } from "./ReguleringSkjema";
+import { GrensejusteringSkjema } from "./GrensejusteringSkjema";
 
-export function NewRegulering() {
+export function NewGrensejustering() {
   const navigate = useNavigate();
   const valgte = useMatrikkelenheter((state) => state.matrikkelenheter);
   const clearMatrikkelenheter = useMatrikkelenheter((state) => state.clearMatrikkelenheter);
@@ -28,15 +28,15 @@ export function NewRegulering() {
       {!valgte.size ? (
         <Paragraph>Ingen matrikkelenheter er valgt. Velg dem i kartet først.</Paragraph>
       ) : (
-        <ReguleringSkjema
+        <GrensejusteringSkjema
           modus="opprett"
           grunnlag={grunnlag}
           onLagre={async (request) => {
-            const id = await createRegulering(request);
+            const id = await createGrensejustering(request);
             clearMatrikkelenheter();
             await navigate({
-              to: "/reguleringer/$reguleringId",
-              params: { reguleringId: String(id) },
+              to: "/grensejusteringer/$grensejusteringId",
+              params: { grensejusteringId: String(id) },
             });
           }}
           avbryt={

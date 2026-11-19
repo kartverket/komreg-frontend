@@ -1,12 +1,14 @@
 import { fraReformSpec, tilReformSpec } from "@/domain/reformSpec";
 import type {
-  OpprettReguleringRequest,
-  ReguleringDetail,
-  ReguleringSummary,
-} from "@/domain/regulering";
+  OpprettGrensejusteringRequest,
+  GrensejusteringDetail,
+  GrensejusteringSummary,
+} from "@/domain/grensejustering";
 import type { ReformSpec } from "@/types/ReformSpec";
 
-export async function createRegulering(request: OpprettReguleringRequest): Promise<number> {
+export async function createGrensejustering(
+  request: OpprettGrensejusteringRequest,
+): Promise<number> {
   const reformSpec = tilReformSpec(request);
 
   try {
@@ -17,17 +19,17 @@ export async function createRegulering(request: OpprettReguleringRequest): Promi
       },
       body: JSON.stringify(reformSpec),
     });
-    if (!res.ok) throw new Error("Reguleringen kunne ikke lagres på serveren");
+    if (!res.ok) throw new Error("Grensejusteringen kunne ikke lagres på serveren");
     const { id } = (await res.json()) as { id: number };
     return id;
   } catch {
-    throw new Error("Reguleringen kunne ikke lagres på serveren");
+    throw new Error("Grensejusteringen kunne ikke lagres på serveren");
   }
 }
 
-export async function updateRegulering(
+export async function updateGrensejustering(
   id: number,
-  request: OpprettReguleringRequest,
+  request: OpprettGrensejusteringRequest,
 ): Promise<void> {
   const reformSpec = tilReformSpec(request);
   let res: Response;
@@ -40,41 +42,40 @@ export async function updateRegulering(
       body: JSON.stringify(reformSpec),
     });
   } catch {
-    throw new Error("Reguleringen kunne ikke lagres på serveren");
+    throw new Error("Grensejusteringen kunne ikke lagres på serveren");
   }
   if (!res.ok) {
-    if (res.status === 404) throw new Error("Fant ikke reguleringen");
-    throw new Error("Reguleringen kunne ikke lagres på serveren");
+    if (res.status === 404) throw new Error("Fant ikke grensejusteringen");
+    throw new Error("Grensejusteringen kunne ikke lagres på serveren");
   }
 }
 
-export async function listReguleringer(): Promise<ReguleringSummary[]> {
+export async function listGrensejusteringer(): Promise<GrensejusteringSummary[]> {
   try {
     const res = await fetch(new URL("/api/regulering/api/reguleringer", window.location.origin));
-    if (!res.ok) throw new Error("Reguleringer kunne ikke hentes fra serveren");
-    const data = (await res.json()) as { id: number; navn: string; ikrafttredelse: string }[];
+    if (!res.ok) throw new Error("Grensejusteringer kunne ikke hentes fra serveren");
+    const data = (await res.json()) as { id: number; navn: string }[];
 
-    return data.map(({ id, navn, ikrafttredelse }) => ({
+    return data.map(({ id, navn }) => ({
       id,
       navn,
-      dato: ikrafttredelse,
       fraKommunenummer: "", // Placeholder, replace with actual value if available
       tilKommunenummer: "", // Placeholder, replace with actual value if available
     }));
   } catch {
-    throw new Error("Reguleringer kunne ikke hentes fra serveren");
+    throw new Error("Grensejusteringer kunne ikke hentes fra serveren");
   }
 }
 
-export async function getRegulering(id: number): Promise<ReguleringDetail> {
+export async function getGrensejustering(id: number): Promise<GrensejusteringDetail> {
   let res: Response;
   try {
     res = await fetch(new URL(`/api/regulering/api/reguleringer/${id}`, window.location.origin));
   } catch {
-    throw new Error("Reguleringen kunne ikke hentes fra serveren");
+    throw new Error("Grensejusteringen kunne ikke hentes fra serveren");
   }
-  if (res.status === 404) throw new Error("Fant ikke reguleringen");
-  if (!res.ok) throw new Error("Reguleringen kunne ikke hentes fra serveren");
+  if (res.status === 404) throw new Error("Fant ikke grensejusteringen");
+  if (!res.ok) throw new Error("Grensejusteringen kunne ikke hentes fra serveren");
   const data = (await res.json()) as ReformSpec;
   return fraReformSpec(id, data);
 }

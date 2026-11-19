@@ -8,7 +8,7 @@ import type { Matrikkelenhet } from "@/types/Matrikkelenhet";
 import { transform } from "ol/proj";
 import type { Teig } from "@/types/TeigResponse";
 import type { Address } from "@/types/Address";
-import type { Matrikkelnummer } from "@/domain/regulering";
+import type { Matrikkelnummer } from "@/domain/grensejustering";
 
 type ReguleringApiAddress = {
   type: "Feature";

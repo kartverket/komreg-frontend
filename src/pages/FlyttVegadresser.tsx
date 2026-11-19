@@ -56,7 +56,7 @@ export function FlyttVegadresser({ vegvalg }: { vegvalg: Vegvalgstate }) {
                   valgt={vegvalg.valgtVeg(gruppe.nokkel)}
                   onVelg={(veg) => vegvalg.velgVeg(gruppe.nokkel, veg)}
                 />
-                <div className="regulering-table-wrapper">
+                <div className="grensejustering-table-wrapper">
                   <Table data-size="sm" zebra>
                     <Table.Head>
                       <Table.Row>

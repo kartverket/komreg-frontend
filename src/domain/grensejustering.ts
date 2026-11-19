@@ -39,25 +39,19 @@ export type GrensejusteringDraft = {
   vegadresser: VegadresseDraft[];
 };
 
-export type OpprettReguleringRequest = {
+export type OpprettGrensejusteringRequest = GrensejusteringDraft & {
   navn: string;
-  dato: string;
-  grensejustering: GrensejusteringDraft;
 };
 
-export type ReguleringSummary = {
+export type GrensejusteringSummary = {
   id: number;
   navn: string;
-  dato: string;
   fraKommunenummer: string;
   tilKommunenummer: string;
 };
 
-export type ReguleringDetail = {
+export type GrensejusteringDetail = OpprettGrensejusteringRequest & {
   id: number;
-  navn: string;
-  dato: string;
-  grensejustering: GrensejusteringDraft;
 };
 
 // Det som er valgt i kartet, uten det brukeren har fylt inn i skjemaet.
@@ -69,7 +63,6 @@ export type Grunnlag = {
 
 export type Startverdier = {
   navn: string;
-  dato: string;
   fraKommunenummer: string;
   tilKommunenummer: string;
   nyeNumre: ReadonlyMap<string, NyttMatrikkelnummerInput>;
@@ -177,25 +170,31 @@ function lagNyeNumreInput(
   return nyeNumre;
 }
 
-// Deler en lagret regulering i det som er valgt og det som er fylt inn, slik skjemaet har dem
-// når reguleringen opprettes.
-export function lagRedigering({ navn, dato, grensejustering }: ReguleringDetail): {
+// Deler en lagret grensejustering i det som er valgt og det som er fylt inn, slik skjemaet har dem
+// når grensejusteringen opprettes.
+export function lagRedigering({
+  navn,
+  fraKommunenummer,
+  tilKommunenummer,
+  matrikkelenheter,
+  teiger,
+  vegadresser,
+}: GrensejusteringDetail): {
   grunnlag: Grunnlag;
   startverdier: Startverdier;
 } {
   return {
     grunnlag: {
-      matrikkelenheter: grensejustering.matrikkelenheter.map(utenNyttMatrikkelnummer),
-      teiger: grensejustering.teiger,
-      vegadresser: grensejustering.vegadresser.map(utenNyeVegadresser),
+      matrikkelenheter: matrikkelenheter.map(utenNyttMatrikkelnummer),
+      teiger,
+      vegadresser: vegadresser.map(utenNyeVegadresser),
     },
     startverdier: {
       navn,
-      dato,
-      fraKommunenummer: grensejustering.fraKommunenummer,
-      tilKommunenummer: grensejustering.tilKommunenummer,
-      nyeNumre: lagNyeNumreInput(grensejustering.matrikkelenheter),
-      vegvalg: lagVegadressevalg(grensejustering.vegadresser),
+      fraKommunenummer,
+      tilKommunenummer,
+      nyeNumre: lagNyeNumreInput(matrikkelenheter),
+      vegvalg: lagVegadressevalg(vegadresser),
     },
   };
 }
@@ -230,7 +229,7 @@ function formatNummer({ gardsnummer, bruksnummer }: Matrikkelnummer) {
   return bruksnummer === null ? `${gardsnummer}` : `${gardsnummer}/${bruksnummer}`;
 }
 
-// Finner to enheter i reguleringen som havner på samme nummer i til kommune. Et helt
+// Finner to enheter i grensejusteringen som havner på samme nummer i til kommune. Et helt
 // gårdsnummer tar med seg bruksnumre vi ikke kjenner, så alt annet som havner på samme
 // gårdsnummer regnes som kollisjon.
 function forsteKollisjonNyeMatrikkelnummer(matrikkelenheter: MatrikkelenhetDraft[]): string | null {

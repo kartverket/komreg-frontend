@@ -11,7 +11,7 @@ import {
   medNyeMatrikkelnumre,
   validerGrensejustering,
   type MatrikkelenhetDraft,
-} from "./regulering";
+} from "./grensejustering";
 import type { Teig } from "@/types/TeigResponse";
 
 function teig(lokalid: number): Teig {
@@ -30,30 +30,26 @@ const enhet: MatrikkelenhetDraft = {
 };
 
 describe("lagRedigering", () => {
-  it("gjør en lagret regulering om til valg og innfylte verdier", () => {
+  it("gjør en lagret grensejustering om til valg og innfylte verdier", () => {
     const lagret = {
       id: 1,
       navn: "Lagret",
-      dato: "2026-10-21",
-      grensejustering: {
-        fraKommunenummer: "0301",
-        tilKommunenummer: "0302",
-        matrikkelenheter: [
-          { ...enhet, nyGardsnummer: 5, nyBruksnummer: 6 },
-          { ...enhet, bruksnummer: 3 },
-        ],
-        teiger: [{ kommunenummer: "0301", teigId: 7 }],
-        vegadresser: [],
-      },
+      fraKommunenummer: "0301",
+      tilKommunenummer: "0302",
+      matrikkelenheter: [
+        { ...enhet, nyGardsnummer: 5, nyBruksnummer: 6 },
+        { ...enhet, bruksnummer: 3 },
+      ],
+      teiger: [{ kommunenummer: "0301", teigId: 7 }],
+      vegadresser: [],
     };
 
     const { grunnlag, startverdier } = lagRedigering(lagret);
 
     expect(grunnlag.matrikkelenheter).toEqual([enhet, { ...enhet, bruksnummer: 3 }]);
-    expect(grunnlag.teiger).toEqual(lagret.grensejustering.teiger);
+    expect(grunnlag.teiger).toEqual(lagret.teiger);
     expect(startverdier).toMatchObject({
       navn: "Lagret",
-      dato: "2026-10-21",
       fraKommunenummer: "0301",
       tilKommunenummer: "0302",
     });
@@ -61,7 +57,7 @@ describe("lagRedigering", () => {
       new Map([["0301-1/2", { gardsnummer: "5", bruksnummer: "6" }]]),
     );
     expect(medNyeMatrikkelnumre(grunnlag.matrikkelenheter, startverdier.nyeNumre)).toEqual(
-      lagret.grensejustering.matrikkelenheter,
+      lagret.matrikkelenheter,
     );
   });
 });
@@ -244,7 +240,7 @@ describe("validerGrensejustering", () => {
     );
   });
 
-  it("godtar enheter i reguleringen som får ulike numre", () => {
+  it("godtar enheter i grensejusteringen som får ulike numre", () => {
     const flyttet = { ...enhet, nyGardsnummer: 201 };
     expect(validerGrensejustering({ ...gyldig, matrikkelenheter: [enhet, flyttet] })).toBeNull();
   });
