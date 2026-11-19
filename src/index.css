@@ -47,13 +47,13 @@ main {
   align-items: center;
 }
 
-.grensejustering-form {
+.regulering-form {
   display: grid;
   gap: var(--ds-size-4);
 }
 
 /* Tabellene får hele bredden, men enkle tekstfelt blir ikke lengre enn de trenger. */
-.grensejustering-felt {
+.regulering-felt {
   max-width: 36rem;
 }
 
@@ -61,17 +61,17 @@ main {
   color: var(--ds-color-danger-text-default);
 }
 
-.grensejustering-table-wrapper {
+.regulering-table-wrapper {
   max-width: 100%;
   overflow-x: auto;
 }
 
-.grensejustering-table-row {
+.regulering-table-row {
   cursor: pointer;
 }
 
-.grensejustering-table-link,
-.grensejustering-table-link:visited {
+.regulering-table-link,
+.regulering-table-link:visited {
   color: var(--ds-color-neutral-text-default);
 }
 

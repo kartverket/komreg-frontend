@@ -14,10 +14,10 @@ import { Link } from "@kv-designsystem/react";
 import { ErrorPage } from "./pages/ErrorPage";
 import { Home } from "./pages/Home";
 import { NotFound } from "./pages/NotFound";
-import { EditGrensejustering } from "./pages/EditGrensejustering";
-import { NewGrensejustering } from "./pages/NewGrensejustering";
-import { GrensejusteringDetail } from "./pages/GrensejusteringDetail";
-import { Grensejusteringer } from "./pages/Grensejusteringer";
+import { EditRegulering } from "./pages/EditRegulering";
+import { NewRegulering } from "./pages/NewRegulering";
+import { ReguleringDetail } from "./pages/ReguleringDetail";
+import { Reguleringer } from "./pages/Reguleringer";
 
 export type MapSearchParams = { lat?: number; lon?: number; zoom?: number };
 
@@ -33,7 +33,7 @@ function Layout({ children }: { children: ReactNode }) {
           <RouterLink to="/kart">Kart</RouterLink>
         </Link>
         <Link asChild>
-          <RouterLink to="/grensejusteringer">Grensejusteringer</RouterLink>
+          <RouterLink to="/reguleringer">Reguleringer</RouterLink>
         </Link>
       </nav>
       {children}
@@ -74,27 +74,23 @@ function createAppRouter(history: RouterHistory) {
   const routeTree = rootRoute.addChildren([
     layout.addChildren([
       createRoute({ getParentRoute: () => layout, path: "/", component: Home }),
+      createRoute({ getParentRoute: () => layout, path: "/reguleringer", component: Reguleringer }),
       createRoute({
         getParentRoute: () => layout,
-        path: "/grensejusteringer",
-        component: Grensejusteringer,
+        path: "/reguleringer/ny",
+        component: NewRegulering,
       }),
       createRoute({
         getParentRoute: () => layout,
-        path: "/grensejusteringer/ny",
-        component: NewGrensejustering,
-      }),
-      createRoute({
-        getParentRoute: () => layout,
-        path: "/grensejusteringer/$grensejusteringId",
+        path: "/reguleringer/$reguleringId",
         remountDeps: ({ params }) => params,
-        component: GrensejusteringDetail,
+        component: ReguleringDetail,
       }),
       createRoute({
         getParentRoute: () => layout,
-        path: "/grensejusteringer/$grensejusteringId/rediger",
+        path: "/reguleringer/$reguleringId/rediger",
         remountDeps: ({ params }) => params,
-        component: EditGrensejustering,
+        component: EditRegulering,
       }),
     ]),
     createRoute({

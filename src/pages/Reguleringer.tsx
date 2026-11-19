@@ -1,23 +1,23 @@
 import { useEffect, useState } from "react";
 import { Heading, Link, Paragraph, Table } from "@kv-designsystem/react";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
-import { listGrensejusteringer } from "@/api/grensejusteringer";
-import type { GrensejusteringSummary } from "@/domain/grensejustering";
+import { listReguleringer } from "@/api/reguleringer";
+import type { ReguleringSummary } from "@/domain/regulering";
 
-export function Grensejusteringer() {
+export function Reguleringer() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<GrensejusteringSummary[] | null>(null);
+  const [items, setItems] = useState<ReguleringSummary[] | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
-    void listGrensejusteringer()
-      .then((grensejusteringer) => {
-        if (active) setItems(grensejusteringer);
+    void listReguleringer()
+      .then((reguleringer) => {
+        if (active) setItems(reguleringer);
       })
       .catch((cause: unknown) => {
         if (active) {
-          setError(cause instanceof Error ? cause.message : "Kunne ikke hente grensejusteringer");
+          setError(cause instanceof Error ? cause.message : "Kunne ikke hente reguleringer");
         }
       });
     return () => {
@@ -28,46 +28,47 @@ export function Grensejusteringer() {
   return (
     <>
       <Heading level={1} data-size="lg">
-        Grensejusteringer
+        Reguleringer
       </Heading>
       {error && (
         <Paragraph className="form-error" role="alert">
           {error}
         </Paragraph>
       )}
-      {!error && items === null && <Paragraph>Henter grensejusteringer…</Paragraph>}
+      {!error && items === null && <Paragraph>Henter reguleringer…</Paragraph>}
       {!error && items?.length === 0 && (
-        <Paragraph>Ingen grensejusteringer er opprettet ennå.</Paragraph>
+        <Paragraph>Ingen reguleringer er opprettet ennå.</Paragraph>
       )}
       {items && items.length > 0 && (
-        <div className="grensejustering-table-wrapper">
+        <div className="regulering-table-wrapper">
           <Table data-size="sm" zebra hover>
             <Table.Head>
               <Table.Row>
                 <Table.HeaderCell>Navn</Table.HeaderCell>
                 <Table.HeaderCell>Fra kommune</Table.HeaderCell>
                 <Table.HeaderCell>Til kommune</Table.HeaderCell>
+                <Table.HeaderCell>Ikrafttredelse</Table.HeaderCell>
               </Table.Row>
             </Table.Head>
             <Table.Body>
               {items.map((item) => (
                 <Table.Row
-                  className="grensejustering-table-row"
+                  className="regulering-table-row"
                   key={item.id}
                   onClick={(event) => {
                     if (event.target instanceof Element && event.target.closest("a")) return;
                     void navigate({
-                      to: "/grensejusteringer/$grensejusteringId",
-                      params: { grensejusteringId: String(item.id) },
+                      to: "/reguleringer/$reguleringId",
+                      params: { reguleringId: String(item.id) },
                     });
                   }}
                 >
                   <Table.Cell>
                     <Link asChild>
                       <RouterLink
-                        className="grensejustering-table-link"
-                        to="/grensejusteringer/$grensejusteringId"
-                        params={{ grensejusteringId: String(item.id) }}
+                        className="regulering-table-link"
+                        to="/reguleringer/$reguleringId"
+                        params={{ reguleringId: String(item.id) }}
                       >
                         {item.navn}
                       </RouterLink>
@@ -75,6 +76,7 @@ export function Grensejusteringer() {
                   </Table.Cell>
                   <Table.Cell>{item.fraKommunenummer}</Table.Cell>
                   <Table.Cell>{item.tilKommunenummer}</Table.Cell>
+                  <Table.Cell>{item.dato}</Table.Cell>
                 </Table.Row>
               ))}
             </Table.Body>

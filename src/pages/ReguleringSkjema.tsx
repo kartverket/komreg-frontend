@@ -19,9 +19,9 @@ import {
   type GrensejusteringDraft,
   type Grunnlag,
   type NyttMatrikkelnummerInput,
-  type OpprettGrensejusteringRequest,
+  type OpprettReguleringRequest,
   type Startverdier,
-} from "@/domain/grensejustering";
+} from "@/domain/regulering";
 import { finnOpptattVegadresse, nyeAdressekoder } from "@/domain/vegadresse";
 import { useVegvalg } from "@/hooks/useVegvalg";
 import { finnEksisterendeVegadresser } from "@/utils/AdresseUtils";
@@ -31,14 +31,14 @@ import { FlyttVegadresser } from "./FlyttVegadresser";
 type Props = {
   modus: "opprett" | "rediger";
   grunnlag: Grunnlag;
-  // Det som er fylt inn fra før, når en eksisterende grensejustering redigeres.
+  // Det som er fylt inn fra før, når en eksisterende regulering redigeres.
   startverdier?: Startverdier;
-  // Kalles med en gyldig grensejustering. Feil den kaster vises i skjemaet.
-  onLagre: (request: OpprettGrensejusteringRequest) => Promise<void>;
+  // Kalles med en gyldig regulering. Feil den kaster vises i skjemaet.
+  onLagre: (request: OpprettReguleringRequest) => Promise<void>;
   avbryt: ReactNode;
 };
 
-export function GrensejusteringSkjema({ modus, grunnlag, startverdier, onLagre, avbryt }: Props) {
+export function ReguleringSkjema({ modus, grunnlag, startverdier, onLagre, avbryt }: Props) {
   const redigerer = modus === "rediger";
   const { matrikkelenheter: valgteEnheter, teiger } = grunnlag;
   const vegvalg = useVegvalg(
@@ -59,6 +59,7 @@ export function GrensejusteringSkjema({ modus, grunnlag, startverdier, onLagre, 
     nyeNumre,
   );
   const [navn, setNavn] = useState(startverdier?.navn ?? "");
+  const [dato, setDato] = useState(startverdier?.dato ?? "");
   const [fraKommune, setFraKommune] = useState(
     startverdier?.fraKommunenummer ??
       valgteEnheter[0]?.kommunenummer ??
@@ -152,24 +153,32 @@ export function GrensejusteringSkjema({ modus, grunnlag, startverdier, onLagre, 
     }
 
     try {
-      await onLagre({ navn, ...grensejustering });
+      await onLagre({ navn, dato, grensejustering });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Kunne ikke lagre grensejusteringen");
+      setError(cause instanceof Error ? cause.message : "Kunne ikke lagre reguleringen");
       setSaving(false);
     }
   }
 
   return (
-    <form className="grensejustering-form" onSubmit={(event) => void submit(event)}>
+    <form className="regulering-form" onSubmit={(event) => void submit(event)}>
       <Textfield
-        className="grensejustering-felt"
+        className="regulering-felt"
         label="Navn"
         value={navn}
         onChange={(event) => setNavn(event.target.value)}
         required
       />
       <Textfield
-        className="grensejustering-felt"
+        className="regulering-felt"
+        label="Ikrafttredelsesdato"
+        type="date"
+        value={dato}
+        onChange={(event) => setDato(event.target.value)}
+        required
+      />
+      <Textfield
+        className="regulering-felt"
         label="Fra kommune"
         value={fraKommune}
         onChange={(event) => setFraKommune(event.target.value)}
@@ -179,7 +188,7 @@ export function GrensejusteringSkjema({ modus, grunnlag, startverdier, onLagre, 
         required
       />
       <Textfield
-        className="grensejustering-felt"
+        className="regulering-felt"
         label="Til kommune"
         value={tilKommune}
         onChange={(event) => endreTilKommune(event.target.value)}
@@ -203,7 +212,7 @@ export function GrensejusteringSkjema({ modus, grunnlag, startverdier, onLagre, 
           Fyll inn nytt gårds- og bruksnummer der matrikkelenheten skal få nytt nummer i til
           kommune. Tomme felt beholder dagens nummer.
         </Paragraph>
-        <div className="grensejustering-table-wrapper">
+        <div className="regulering-table-wrapper">
           <Table data-size="sm" zebra>
             <Table.Head>
               <Table.Row>
@@ -262,7 +271,7 @@ export function GrensejusteringSkjema({ modus, grunnlag, startverdier, onLagre, 
           <Paragraph data-size="sm">
             Teigene beholder teig-ID-en og er fortsatt uten matrikkelnummer i til kommune.
           </Paragraph>
-          <div className="grensejustering-table-wrapper">
+          <div className="regulering-table-wrapper">
             <Table data-size="sm" zebra>
               <Table.Head>
                 <Table.Row>
@@ -295,7 +304,7 @@ export function GrensejusteringSkjema({ modus, grunnlag, startverdier, onLagre, 
               : "Lagre endringer"
             : saving
               ? "Oppretter…"
-              : "Opprett grensejustering"}
+              : "Opprett regulering"}
         </Button>
       </div>
     </form>

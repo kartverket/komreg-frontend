@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { tilReformSpec } from "./reformSpec";
-import type { GrensejusteringDraft } from "./grensejustering";
+import type { GrensejusteringDraft } from "./regulering";
 import type { VegadresseDraft } from "./vegadresse";
 
 const veg = { adressekode: 1234, adressenavn: "Langemyrvegen" };
@@ -18,7 +18,7 @@ function spec(vegadresser: VegadresseDraft[]) {
     teiger: [],
     vegadresser,
   };
-  return tilReformSpec({ navn: "Test", ...grensejustering }).operasjoner;
+  return tilReformSpec({ navn: "Test", dato: "2027-01-01", grensejustering }).operasjoner;
 }
 
 describe("tilReformSpec", () => {

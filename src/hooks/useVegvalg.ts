@@ -32,7 +32,7 @@ function tomtVegvalg(tilKommunenummer: string): Vegvalg {
 
 export type Adressestatus = "ikke-valgt" | "sjekker" | "ledig" | "opptatt";
 
-// Med startverdier, for å redigere en grensejustering, er vegene og husnumrene allerede valgt.
+// Med startverdier, for å redigere en regulering, er vegene og husnumrene allerede valgt.
 export function useVegvalg(
   valgteVegadresser: VegadresseDraft[],
   start?: { tilKommunenummer: string; valg: Vegadressevalg },
@@ -50,7 +50,7 @@ export function useVegvalg(
   }
 
   // Henter husnumrene på vegen, så kollisjoner kan vises med en gang. Feiler det, sjekkes
-  // de uansett når grensejusteringen opprettes.
+  // de uansett når reguleringen opprettes.
   function hentEksisterende(tilKommunenummer: string, veg: Veg) {
     void finnEksisterendeVegadresser(tilKommunenummer, [veg.adressekode])
       .then((adresser) =>

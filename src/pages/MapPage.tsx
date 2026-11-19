@@ -55,7 +55,7 @@ export function MapPage() {
         <div className="map-actions">
           {selectedCount ? (
             <Button asChild variant="primary" data-size="sm">
-              <RouterLink to="/grensejusteringer/ny">
+              <RouterLink to="/reguleringer/ny">
                 Opprett grensejustering ({selectedCount})
               </RouterLink>
             </Button>

@@ -3,42 +3,40 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Teig } from "./types/TeigResponse";
-import { createGrensejustering } from "./api/grensejusteringer";
-import type { OpprettGrensejusteringRequest } from "./domain/grensejustering";
+import { createRegulering } from "./api/reguleringer";
+import type { OpprettReguleringRequest } from "./domain/regulering";
 import { useMatrikkelenheter } from "./hooks/useMatrikkelenheter";
 import { App } from "./App";
 
-const lagrede = vi.hoisted(() => ({
-  liste: [] as OpprettGrensejusteringRequest[],
-  feilNeste: false,
-}));
+const lagrede = vi.hoisted(() => ({ liste: [] as OpprettReguleringRequest[], feilNeste: false }));
 
-vi.mock("./api/grensejusteringer", () => ({
-  createGrensejustering: (request: OpprettGrensejusteringRequest) => {
+vi.mock("./api/reguleringer", () => ({
+  createRegulering: (request: OpprettReguleringRequest) => {
     if (lagrede.feilNeste) {
       lagrede.feilNeste = false;
-      return Promise.reject(new Error("Grensejusteringen kunne ikke lagres på serveren"));
+      return Promise.reject(new Error("Reguleringen kunne ikke lagres på serveren"));
     }
     lagrede.liste.push(request);
     return Promise.resolve(lagrede.liste.length);
   },
-  updateGrensejustering: (id: number, request: OpprettGrensejusteringRequest) => {
-    if (!lagrede.liste[id - 1]) return Promise.reject(new Error("Fant ikke grensejusteringen"));
+  updateRegulering: (id: number, request: OpprettReguleringRequest) => {
+    if (!lagrede.liste[id - 1]) return Promise.reject(new Error("Fant ikke reguleringen"));
     lagrede.liste[id - 1] = request;
     return Promise.resolve();
   },
-  getGrensejustering: (id: number) => {
-    const grensejustering = lagrede.liste[id - 1];
-    if (!grensejustering) return Promise.reject(new Error("Fant ikke grensejusteringen"));
-    return Promise.resolve({ id, ...grensejustering });
+  getRegulering: (id: number) => {
+    const regulering = lagrede.liste[id - 1];
+    if (!regulering) return Promise.reject(new Error("Fant ikke reguleringen"));
+    return Promise.resolve({ id, ...regulering });
   },
-  listGrensejusteringer: () =>
+  listReguleringer: () =>
     Promise.resolve(
       lagrede.liste.map((r, i) => ({
         id: i + 1,
         navn: r.navn,
-        fraKommunenummer: r.fraKommunenummer,
-        tilKommunenummer: r.tilKommunenummer,
+        dato: r.dato,
+        fraKommunenummer: r.grensejustering.fraKommunenummer,
+        tilKommunenummer: r.grensejustering.tilKommunenummer,
       })),
     ),
 }));
@@ -127,25 +125,29 @@ function stubVegITilKommune(adressenavn: string, husnumre: number[]) {
   vi.stubGlobal("fetch", fetchMock);
 }
 
-const lagretGrensejustering: OpprettGrensejusteringRequest = {
-  navn: "Lagret grensejustering",
-  fraKommunenummer: "0301",
-  tilKommunenummer: "0302",
-  matrikkelenheter: [
-    { kommunenummer: "0301", gardsnummer: 1, bruksnummer: 1, teigIder: [1], nyGardsnummer: 5 },
-  ],
-  teiger: [],
-  vegadresser: [],
+const lagretRegulering: OpprettReguleringRequest = {
+  navn: "Lagret regulering",
+  dato: "2026-10-21",
+  grensejustering: {
+    fraKommunenummer: "0301",
+    tilKommunenummer: "0302",
+    matrikkelenheter: [
+      { kommunenummer: "0301", gardsnummer: 1, bruksnummer: 1, teigIder: [1], nyGardsnummer: 5 },
+    ],
+    teiger: [],
+    vegadresser: [],
+  },
 };
 
 async function fillIn() {
-  await userEvent.type(await screen.findByRole("textbox", { name: "Navn" }), "Ny grensejustering");
+  await userEvent.type(await screen.findByRole("textbox", { name: "Navn" }), "Ny regulering");
+  await userEvent.type(screen.getByLabelText("Ikrafttredelsesdato"), "2026-10-21");
   await userEvent.type(screen.getByRole("textbox", { name: "Til kommune" }), "0302");
 }
 
 async function fillInAndSubmit() {
   await fillIn();
-  await userEvent.click(screen.getByRole("button", { name: "Opprett grensejustering" }));
+  await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
 }
 
 describe("App", () => {
@@ -193,22 +195,20 @@ describe("App", () => {
     expect(screen.getByRole("link", { name: "Gå til forsiden" })).toBeVisible();
   });
 
-  it("opens the grensejustering details after creating a grensejustering", async () => {
+  it("opens the regulation details after creating a regulation", async () => {
     selectMatrikkelenhet();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await fillInAndSubmit();
 
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Ny grensejustering" }),
-    ).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Ny regulering" })).toBeVisible();
     expect(screen.getByText("0301 → 0302")).toBeVisible();
     expect(screen.getByRole("row", { name: "1 1 1 Uendret" })).toBeVisible();
   });
 
   it("saves a new matrikkelnummer in til kommune", async () => {
     selectMatrikkelenhet();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await userEvent.type(
       await screen.findByRole("textbox", { name: "Nytt gårdsnummer for 0301-1/1" }),
@@ -225,7 +225,7 @@ describe("App", () => {
 
   it("rejects a new matrikkelnummer that is not a positive integer", async () => {
     selectMatrikkelenhet();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await userEvent.type(
       await screen.findByRole("textbox", { name: "Nytt gårdsnummer for 0301-1/1" }),
@@ -239,7 +239,7 @@ describe("App", () => {
   it("rejects a matrikkelnummer that already exists in til kommune", async () => {
     stubEksisterendeMatrikkelnumre("1/1", "1/2");
     selectMatrikkelenhet();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await fillInAndSubmit();
 
@@ -252,7 +252,7 @@ describe("App", () => {
   it("accepts a new matrikkelnummer that is free in til kommune", async () => {
     const fetchMock = stubEksisterendeMatrikkelnumre("1/1", "1/2");
     selectMatrikkelenhet();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await userEvent.type(
       await screen.findByRole("textbox", { name: "Nytt bruksnummer for 0301-1/1" }),
@@ -264,10 +264,10 @@ describe("App", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  it("does not create the grensejustering when the matrikkel check fails", async () => {
+  it("does not create the regulation when the matrikkel check fails", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Nettverksfeil")));
     selectMatrikkelenhet();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await fillInAndSubmit();
 
@@ -277,7 +277,7 @@ describe("App", () => {
 
   it("moves a teig without matrikkelnummer to til kommune", async () => {
     selectTeigUtenMatrikkelnummer();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await fillInAndSubmit();
 
@@ -287,11 +287,11 @@ describe("App", () => {
   it("chooses the veg with the same name in til kommune", async () => {
     stubVegITilKommune("Storgata", [1]);
     selectMatrikkelenhetMedVegadresse();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await fillIn();
     expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Opprett grensejustering" }));
+    await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
 
     expect(await screen.findByRole("row", { name: "Storgata 5 Storgata 5 9999" })).toBeVisible();
   });
@@ -299,7 +299,7 @@ describe("App", () => {
   it("shows a taken husnummer right away and accepts a new one", async () => {
     stubVegITilKommune("Storgata", [5]);
     selectMatrikkelenhetMedVegadresse();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await fillIn();
     expect(await screen.findByRole("cell", { name: "Opptatt" })).toBeVisible();
@@ -308,7 +308,7 @@ describe("App", () => {
       "6",
     );
     expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Opprett grensejustering" }));
+    await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
 
     expect(await screen.findByRole("row", { name: "Storgata 5 Storgata 6 9999" })).toBeVisible();
   });
@@ -316,7 +316,7 @@ describe("App", () => {
   it("lets the user search for and choose another veg", async () => {
     stubVegITilKommune("Kirkevegen", [1]);
     selectMatrikkelenhetMedVegadresse();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await fillIn();
     await userEvent.type(
@@ -327,7 +327,7 @@ describe("App", () => {
       await screen.findByRole("option", { name: "Kirkevegen (9999)", hidden: true }),
     );
     expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Opprett grensejustering" }));
+    await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
 
     expect(await screen.findByRole("row", { name: "Storgata 5 Kirkevegen 5 9999" })).toBeVisible();
   });
@@ -335,7 +335,7 @@ describe("App", () => {
   it("lets one vegadresse leave the veg for all, and requires a veg for it", async () => {
     stubVegITilKommune("Storgata", [1]);
     selectMatrikkelenhetMedVegadresse();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await fillIn();
     expect(await screen.findByRole("cell", { name: "Ledig" })).toBeVisible();
@@ -343,7 +343,7 @@ describe("App", () => {
     expect(
       screen.getByRole("combobox", { name: "Veg i til kommune for Storgata 5" }),
     ).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Opprett grensejustering" }));
+    await userEvent.click(screen.getByRole("button", { name: "Opprett regulering" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Velg veg i til kommune for Storgata 5",
     );
@@ -355,7 +355,7 @@ describe("App", () => {
   it("requires a veg in til kommune when none has the same name", async () => {
     stubVegITilKommune("Kirkevegen", [1]);
     selectMatrikkelenhetMedVegadresse();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await fillInAndSubmit();
 
@@ -366,7 +366,7 @@ describe("App", () => {
 
   it("moves a whole gårdsnummer when chosen", async () => {
     selectMatrikkelenhet();
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await userEvent.click(
       await screen.findByRole("checkbox", { name: "Flytt hele gårdsnummer 0301-1" }),
@@ -376,37 +376,41 @@ describe("App", () => {
     expect(await screen.findByRole("cell", { name: "Hele gårdsnummeret" })).toBeVisible();
   });
 
-  it("shows saved grensejusteringer in a table", async () => {
-    await createGrensejustering({
-      navn: "Lagret grensejustering",
-      fraKommunenummer: "0301",
-      tilKommunenummer: "0302",
-      matrikkelenheter: [],
-      teiger: [],
-      vegadresser: [],
+  it("shows saved regulations in a table", async () => {
+    await createRegulering({
+      navn: "Lagret regulering",
+      dato: "2026-10-21",
+      grensejustering: {
+        fraKommunenummer: "0301",
+        tilKommunenummer: "0302",
+        matrikkelenheter: [],
+        teiger: [],
+        vegadresser: [],
+      },
     });
 
-    renderAt("/grensejusteringer");
+    renderAt("/reguleringer");
 
     expect(await screen.findByRole("table")).toBeVisible();
     expect(screen.getByRole("columnheader", { name: "Fra kommune" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "Lagret grensejustering" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Lagret regulering" })).toBeVisible();
 
     await userEvent.click(screen.getByRole("cell", { name: "0301" }));
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Lagret grensejustering" }),
+      await screen.findByRole("heading", { level: 1, name: "Lagret regulering" }),
     ).toBeVisible();
 
-    await userEvent.click(screen.getByRole("link", { name: "Tilbake til grensejusteringer" }));
+    await userEvent.click(screen.getByRole("link", { name: "Tilbake til reguleringer" }));
     expect(await screen.findByRole("table")).toBeVisible();
   });
 
-  it("edits a saved grensejustering and shows the changes", async () => {
-    const id = await createGrensejustering(lagretGrensejustering);
-    renderAt(`/grensejusteringer/${id}/rediger`);
+  it("edits a saved regulation and shows the changes", async () => {
+    const id = await createRegulering(lagretRegulering);
+    renderAt(`/reguleringer/${id}/rediger`);
 
     const navn = await screen.findByRole("textbox", { name: "Navn" });
-    expect(navn).toHaveValue("Lagret grensejustering");
+    expect(navn).toHaveValue("Lagret regulering");
+    expect(screen.getByLabelText("Ikrafttredelsesdato")).toHaveValue("2026-10-21");
     expect(screen.getByRole("textbox", { name: "Fra kommune" })).toHaveAttribute("readonly");
     expect(screen.getByRole("textbox", { name: "Til kommune" })).toHaveValue("0302");
     expect(screen.getByRole("textbox", { name: "Nytt gårdsnummer for 0301-1/1" })).toHaveValue("5");
@@ -415,14 +419,14 @@ describe("App", () => {
     ).not.toBeInTheDocument();
 
     await userEvent.clear(navn);
-    await userEvent.type(navn, "Endret grensejustering");
+    await userEvent.type(navn, "Endret regulering");
     const gardsnummer = screen.getByRole("textbox", { name: "Nytt gårdsnummer for 0301-1/1" });
     await userEvent.clear(gardsnummer);
     await userEvent.type(gardsnummer, "7");
     await userEvent.click(screen.getByRole("button", { name: "Lagre endringer" }));
 
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Endret grensejustering" }),
+      await screen.findByRole("heading", { level: 1, name: "Endret regulering" }),
     ).toBeVisible();
     expect(screen.getByRole("cell", { name: "7/1" })).toBeVisible();
     expect(lagrede.liste).toHaveLength(1);
@@ -430,19 +434,22 @@ describe("App", () => {
 
   it("keeps the chosen veg and husnummer when editing, and accepts a new husnummer", async () => {
     stubVegITilKommune("Storgata", [1]);
-    const id = await createGrensejustering({
-      ...lagretGrensejustering,
-      vegadresser: [
-        {
-          kommunenummer: "0301",
-          veg: { adressekode: 1234, adressenavn: "Storgata" },
-          husnummer: { nummer: 5, bokstav: "" },
-          nyVeg: { adressekode: 9999, adressenavn: "Storgata" },
-          nyttHusnummer: { nummer: 5, bokstav: "" },
-        },
-      ],
+    const id = await createRegulering({
+      ...lagretRegulering,
+      grensejustering: {
+        ...lagretRegulering.grensejustering,
+        vegadresser: [
+          {
+            kommunenummer: "0301",
+            veg: { adressekode: 1234, adressenavn: "Storgata" },
+            husnummer: { nummer: 5, bokstav: "" },
+            nyVeg: { adressekode: 9999, adressenavn: "Storgata" },
+            nyttHusnummer: { nummer: 5, bokstav: "" },
+          },
+        ],
+      },
     });
-    renderAt(`/grensejusteringer/${id}/rediger`);
+    renderAt(`/reguleringer/${id}/rediger`);
 
     const husnummer = await screen.findByRole("textbox", { name: "Nytt husnummer for Storgata 5" });
     expect(husnummer).toHaveValue("5");
@@ -456,8 +463,8 @@ describe("App", () => {
   });
 
   it("does not save an edit that is invalid", async () => {
-    const id = await createGrensejustering(lagretGrensejustering);
-    renderAt(`/grensejusteringer/${id}/rediger`);
+    const id = await createRegulering(lagretRegulering);
+    renderAt(`/reguleringer/${id}/rediger`);
 
     const til = await screen.findByRole("textbox", { name: "Til kommune" });
     await userEvent.clear(til);
@@ -467,34 +474,34 @@ describe("App", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Fra og til kommune må være forskjellige",
     );
-    expect(lagrede.liste).toEqual([lagretGrensejustering]);
+    expect(lagrede.liste).toEqual([lagretRegulering]);
   });
 
-  it("opens the edit page from the grensejustering details and goes back on cancel", async () => {
-    const id = await createGrensejustering(lagretGrensejustering);
-    renderAt(`/grensejusteringer/${id}`);
+  it("opens the edit page from the regulation details and goes back on cancel", async () => {
+    const id = await createRegulering(lagretRegulering);
+    renderAt(`/reguleringer/${id}`);
 
-    await userEvent.click(await screen.findByRole("link", { name: "Rediger grensejustering" }));
+    await userEvent.click(await screen.findByRole("link", { name: "Rediger regulering" }));
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Rediger grensejustering" }),
+      await screen.findByRole("heading", { level: 1, name: "Rediger regulering" }),
     ).toBeVisible();
 
     await userEvent.click(screen.getByRole("link", { name: "Avbryt" }));
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Lagret grensejustering" }),
+      await screen.findByRole("heading", { level: 1, name: "Lagret regulering" }),
     ).toBeVisible();
   });
 
-  it("shows an error when the grensejustering to edit does not exist", async () => {
-    renderAt("/grensejusteringer/404/rediger");
+  it("shows an error when the regulation to edit does not exist", async () => {
+    renderAt("/reguleringer/404/rediger");
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Fant ikke grensejusteringen");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Fant ikke reguleringen");
   });
 
   it("keeps selected parcels when creation fails", async () => {
     selectMatrikkelenhet();
     lagrede.feilNeste = true;
-    renderAt("/grensejusteringer/ny");
+    renderAt("/reguleringer/ny");
 
     await fillInAndSubmit();
 

@@ -17,7 +17,7 @@ export type VegadresseDraft = {
   kommunenummer: string;
   veg: Veg;
   husnummer: Husnummer;
-  // Må velges før grensejusteringen kan opprettes.
+  // Må velges før reguleringen kan opprettes.
   nyVeg?: Veg;
   // Undefined beholder dagens nummer og bokstav.
   nyttHusnummer?: Husnummer;
@@ -183,7 +183,7 @@ export function utenNyeVegadresser({
   return { kommunenummer, veg, husnummer };
 }
 
-// Det omvendte av medNyeVegadresser, for å redigere en lagret grensejustering. Vegen til den første
+// Det omvendte av medNyeVegadresser, for å redigere en lagret regulering. Vegen til den første
 // adressen på en veg blir felles veg, og adresser med en annen veg får egen veg.
 export function lagVegadressevalg(vegadresser: VegadresseDraft[]): Vegadressevalg {
   const heleVeger = new Set<string>();
@@ -222,7 +222,7 @@ function nyAdresseNokkel({ nyVeg, nyttHusnummer, husnummer }: VegadresseDraft): 
 }
 
 // Gir vegadresseNokkel for adressene som havner på en adresse som finnes i til kommune, eller
-// på samme adresse som en annen adresse i grensejusteringen.
+// på samme adresse som en annen adresse i reguleringen.
 export function finnKollisjoner(
   vegadresser: VegadresseDraft[],
   eksisterende: EksisterendeVegadresse[],
