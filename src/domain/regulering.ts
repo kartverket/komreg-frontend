@@ -60,8 +60,6 @@ export type ReguleringSummary = {
   id: number;
   navn: string;
   dato: string;
-  fraKommunenummer: string;
-  tilKommunenummer: string;
 };
 
 export type ReguleringDetail = {

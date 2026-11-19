@@ -45,8 +45,6 @@ export function Reguleringer() {
             <Table.Head>
               <Table.Row>
                 <Table.HeaderCell>Navn</Table.HeaderCell>
-                <Table.HeaderCell>Fra kommune</Table.HeaderCell>
-                <Table.HeaderCell>Til kommune</Table.HeaderCell>
                 <Table.HeaderCell>Ikrafttredelse</Table.HeaderCell>
               </Table.Row>
             </Table.Head>
@@ -74,8 +72,6 @@ export function Reguleringer() {
                       </RouterLink>
                     </Link>
                   </Table.Cell>
-                  <Table.Cell>{item.fraKommunenummer}</Table.Cell>
-                  <Table.Cell>{item.tilKommunenummer}</Table.Cell>
                   <Table.Cell>{item.dato}</Table.Cell>
                 </Table.Row>
               ))}

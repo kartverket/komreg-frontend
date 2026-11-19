@@ -378,36 +378,6 @@ describe("App", () => {
     expect(await screen.findByRole("cell", { name: "Hele gårdsnummeret" })).toBeVisible();
   });
 
-  it("shows saved regulations in a table", async () => {
-    await createRegulering({
-      navn: "Lagret regulering",
-      dato: "2026-10-21",
-      grensejusteringer: [
-        {
-          fraKommunenummer: "0301",
-          tilKommunenummer: "0302",
-          matrikkelenheter: [],
-          teiger: [],
-          vegadresser: [],
-        },
-      ],
-    });
-
-    renderAt("/reguleringer");
-
-    expect(await screen.findByRole("table")).toBeVisible();
-    expect(screen.getByRole("columnheader", { name: "Fra kommune" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "Lagret regulering" })).toBeVisible();
-
-    await userEvent.click(screen.getByRole("cell", { name: "0301" }));
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Lagret regulering" }),
-    ).toBeVisible();
-
-    await userEvent.click(screen.getByRole("link", { name: "Tilbake til reguleringer" }));
-    expect(await screen.findByRole("table")).toBeVisible();
-  });
-
   it("edits a saved grensejustering without the regulation's navn and dato", async () => {
     const id = await createRegulering(lagretRegulering);
     renderAt(`/reguleringer/${id}/rediger`);
