@@ -18,6 +18,7 @@ import { EditRegulering } from "./pages/EditRegulering";
 import { NewRegulering } from "./pages/NewRegulering";
 import { ReguleringDetail } from "./pages/ReguleringDetail";
 import { Reguleringer } from "./pages/Reguleringer";
+import { listReguleringer } from "./api/reguleringer";
 
 export type MapSearchParams = { lat?: number; lon?: number; zoom?: number };
 
@@ -79,6 +80,7 @@ function createAppRouter(history: RouterHistory) {
         getParentRoute: () => layout,
         path: "/reguleringer/ny",
         component: NewRegulering,
+        loader: () => listReguleringer(),
       }),
       createRoute({
         getParentRoute: () => layout,
@@ -89,8 +91,16 @@ function createAppRouter(history: RouterHistory) {
       createRoute({
         getParentRoute: () => layout,
         path: "/reguleringer/$reguleringId/rediger",
-        remountDeps: ({ params }) => params,
+        remountDeps: ({ params, search }) => ({ ...params, ...search }),
+        // Hvilken av grensejusteringene i reguleringen som redigeres. Standard den første.
+        validateSearch: (search: Record<string, unknown>): { grensejustering?: number } => {
+          const grensejustering = Number(search.grensejustering);
+          return Number.isInteger(grensejustering) && grensejustering >= 0
+            ? { grensejustering }
+            : {};
+        },
         component: EditRegulering,
+        loader: () => listReguleringer(),
       }),
     ]),
     createRoute({

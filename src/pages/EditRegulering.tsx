@@ -1,23 +1,45 @@
 import { Button, Heading, Paragraph } from "@kv-designsystem/react";
-import { Link as RouterLink, useNavigate, useParams } from "@tanstack/react-router";
+import {
+  Link as RouterLink,
+  useLoaderData,
+  useNavigate,
+  useParams,
+  useSearch,
+} from "@tanstack/react-router";
 import { updateRegulering } from "@/api/reguleringer";
 import { BackButton } from "@/components/BackButton/BackButton";
-import { lagRedigering, type ReguleringDetail } from "@/domain/regulering";
+import { lagRedigering, medGrensejustering, type ReguleringDetail } from "@/domain/regulering";
 import { useRegulering } from "@/hooks/useRegulering";
 import { ReguleringSkjema } from "./ReguleringSkjema";
 
+const ROUTE = "/layout/reguleringer/$reguleringId/rediger";
+
 function EditSkjema({ regulering }: { regulering: ReguleringDetail }) {
   const navigate = useNavigate();
+  const reguleringer = useLoaderData({ from: ROUTE });
+  const indeks = useSearch({ from: ROUTE }).grensejustering ?? 0;
   const reguleringId = String(regulering.id);
-  const { grunnlag, startverdier } = lagRedigering(regulering);
+  const redigering = lagRedigering(regulering, indeks);
+
+  if (!redigering) {
+    return (
+      <Paragraph className="form-error" role="alert">
+        Fant ikke grensejusteringen
+      </Paragraph>
+    );
+  }
 
   return (
     <ReguleringSkjema
       modus="rediger"
-      grunnlag={grunnlag}
-      startverdier={startverdier}
-      onLagre={async (request) => {
-        await updateRegulering(regulering.id, request);
+      grunnlag={redigering.grunnlag}
+      startverdier={redigering.startverdier}
+      reguleringer={reguleringer}
+      onLagre={async ({ grensejustering }) => {
+        await updateRegulering(
+          regulering.id,
+          medGrensejustering(regulering, grensejustering, indeks),
+        );
         await navigate({ to: "/reguleringer/$reguleringId", params: { reguleringId } });
       }}
       avbryt={
@@ -39,7 +61,7 @@ export function EditRegulering() {
     <>
       <BackButton to="/reguleringer">Tilbake til reguleringer</BackButton>
       <Heading level={1} data-size="lg">
-        Rediger regulering
+        Rediger grensejustering
       </Heading>
       {error ? (
         <Paragraph className="form-error" role="alert">
@@ -48,7 +70,10 @@ export function EditRegulering() {
       ) : !regulering ? (
         <Paragraph>Henter regulering…</Paragraph>
       ) : (
-        <EditSkjema regulering={regulering} />
+        <>
+          <Paragraph>Regulering: {regulering.navn}</Paragraph>
+          <EditSkjema regulering={regulering} />
+        </>
       )}
     </>
   );

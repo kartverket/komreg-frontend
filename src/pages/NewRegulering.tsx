@@ -1,13 +1,14 @@
 import { Button, Heading, Paragraph } from "@kv-designsystem/react";
-import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
-import { createRegulering } from "@/api/reguleringer";
-import { lagMatrikkelenhetDraft, lagTeigDraft } from "@/domain/regulering";
+import { Link as RouterLink, useLoaderData, useNavigate } from "@tanstack/react-router";
+import { createRegulering, getRegulering, updateRegulering } from "@/api/reguleringer";
+import { lagMatrikkelenhetDraft, lagTeigDraft, medGrensejustering } from "@/domain/regulering";
 import { lagVegadresseDrafts } from "@/domain/vegadresse";
 import { useMatrikkelenheter } from "@/hooks/useMatrikkelenheter";
 import { ReguleringSkjema } from "./ReguleringSkjema";
 
 export function NewRegulering() {
   const navigate = useNavigate();
+  const reguleringer = useLoaderData({ from: "/layout/reguleringer/ny" });
   const valgte = useMatrikkelenheter((state) => state.matrikkelenheter);
   const clearMatrikkelenheter = useMatrikkelenheter((state) => state.clearMatrikkelenheter);
   const grunnlag = {
@@ -31,8 +32,16 @@ export function NewRegulering() {
         <ReguleringSkjema
           modus="opprett"
           grunnlag={grunnlag}
-          onLagre={async (request) => {
-            const id = await createRegulering(request);
+          reguleringer={reguleringer}
+          onLagre={async ({ navn, dato, grensejustering, eksisterendeReguleringId }) => {
+            let id: number;
+            if (eksisterendeReguleringId === undefined) {
+              id = await createRegulering({ navn, dato, grensejusteringer: [grensejustering] });
+            } else {
+              id = eksisterendeReguleringId;
+              const regulering = await getRegulering(id);
+              await updateRegulering(id, medGrensejustering(regulering, grensejustering));
+            }
             clearMatrikkelenheter();
             await navigate({
               to: "/reguleringer/$reguleringId",
