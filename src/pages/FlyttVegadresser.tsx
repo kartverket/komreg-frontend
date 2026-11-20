@@ -1,9 +1,9 @@
 import { Button, Checkbox, Heading, Input, Paragraph, Table } from "@kv-designsystem/react";
 import {
-  formatHusnummer,
-  formatNyVegadresse,
+  formatNyHusnummergruppe,
+  formatHusnummergruppe,
   formatVeg,
-  formatVegadresse,
+  grupperPaHusnummer,
   vegadresseNokkel,
 } from "@/domain/vegadresse";
 import type { Adressestatus, Vegvalgstate } from "@/hooks/useVegvalg";
@@ -24,8 +24,9 @@ export function FlyttVegadresser({ vegvalg }: { vegvalg: Vegvalgstate }) {
       </Heading>
       <Paragraph data-size="sm">
         Velg vegen i til kommune som adressene skal kobles til. Finnes det en veg med samme navn, er
-        den valgt. Vegen gjelder alle adressene på vegen, men du kan velge en annen veg for én
-        adresse. Er adressen opptatt, fyller du inn et nytt husnummer, for eksempel 12B.
+        den valgt. Vegen gjelder alle adressene på vegen, men du kan velge en annen veg for ett
+        husnummer. Bokstavene flyttes sammen med nummeret, så 8A, 8B og 8C kan bare flyttes samlet.
+        Er adressen opptatt, fyller du inn et nytt husnummer, for eksempel 12.
       </Paragraph>
       {vegvalg.grupper.map((gruppe) => {
         const vegnavn = formatVeg(gruppe.veg);
@@ -67,10 +68,14 @@ export function FlyttVegadresser({ vegvalg }: { vegvalg: Vegvalgstate }) {
                       </Table.Row>
                     </Table.Head>
                     <Table.Body>
-                      {gruppe.adresser.map((adresse) => {
-                        const nokkel = vegadresseNokkel(adresse);
-                        const tekst = formatVegadresse(adresse);
-                        const status = vegvalg.status(adresse, nokkel);
+                      {grupperPaHusnummer(gruppe.adresser).map(({ nokkel, adresser }) => {
+                        const [adresse] = adresser;
+                        if (!adresse) return null;
+                        const tekst = formatHusnummergruppe(adresser);
+                        const statuser = adresser.map((enAdresse) =>
+                          vegvalg.status(enAdresse, vegadresseNokkel(enAdresse)),
+                        );
+                        const status = statuser.find((enStatus) => enStatus !== "ledig") ?? "ledig";
                         return (
                           <Table.Row key={nokkel}>
                             <Table.Cell>{tekst}</Table.Cell>
@@ -106,12 +111,12 @@ export function FlyttVegadresser({ vegvalg }: { vegvalg: Vegvalgstate }) {
                                 </Button>
                               )}
                             </Table.Cell>
-                            <Table.Cell>{formatNyVegadresse(adresse)}</Table.Cell>
+                            <Table.Cell>{formatNyHusnummergruppe(adresser)}</Table.Cell>
                             <Table.Cell>
                               <Input
                                 className="husnummer-input"
                                 aria-label={`Nytt husnummer for ${tekst}`}
-                                placeholder={formatHusnummer(adresse.husnummer)}
+                                placeholder={String(adresse.husnummer.nummer)}
                                 value={vegvalg.husnummer(nokkel)}
                                 onChange={(event) =>
                                   vegvalg.endreHusnummer(nokkel, event.target.value)
