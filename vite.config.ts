@@ -5,7 +5,8 @@ import babel from "@rolldown/plugin-babel";
 
 export default defineConfig({
   fmt: {
-    ignorePatterns: [".security/risc/*.risc.yaml"],
+    // regulering-api.d.ts is generated from the backend's OpenAPI document (see README).
+    ignorePatterns: [".security/risc/*.risc.yaml", "src/api/regulering-api.d.ts"],
   },
   lint: {
     plugins: ["react", "typescript", "oxc", "unicorn", "vitest"],
