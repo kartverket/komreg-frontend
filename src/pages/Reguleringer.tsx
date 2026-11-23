@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { listReguleringer } from "@/api/reguleringer";
 import { Heading, Link, Paragraph, Table, Button } from "@kv-designsystem/react";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
+import { listReguleringer } from "@/api/reguleringer";
 import type { ReguleringSummary } from "@/domain/regulering";
 
 export function Reguleringer() {
