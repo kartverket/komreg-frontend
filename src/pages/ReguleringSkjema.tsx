@@ -27,16 +27,25 @@ import { finnEksisterendeVegadresser } from "@/utils/AdresseUtils";
 import { finnEksisterendeMatrikkelnumre } from "@/utils/TeigUtils";
 import { GrensejusteringSkjema } from "./GrensejusteringSkjema";
 
-type Props = {
-  modus: "opprett" | "rediger";
+type FellesProps = {
   grunnlag: Grunnlag;
-  // Det som er fylt inn fra før, når en eksisterende grensejustering redigeres.
-  startverdier?: Startverdier;
-  reguleringer: ReguleringSummary[];
-  // Kalles med en gyldig grensejustering. Feil den kaster vises i skjemaet.
   onLagre: (lagring: GrensejusteringLagring) => Promise<void>;
   avbryt: ReactNode;
 };
+
+type ModusProps =
+  | {
+      modus: "rediger";
+      // Det som er fylt inn fra før, når en eksisterende grensejustering redigeres.
+      startverdier?: Startverdier;
+      reguleringer?: undefined;
+    }
+  | {
+      modus: "opprett";
+      startverdier?: undefined;
+      reguleringer: ReguleringSummary[];
+    };
+type Props = FellesProps & ModusProps;
 
 export function ReguleringSkjema({
   modus,

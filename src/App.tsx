@@ -100,7 +100,6 @@ function createAppRouter(history: RouterHistory) {
             : {};
         },
         component: EditRegulering,
-        loader: () => listReguleringer(),
       }),
     ]),
     createRoute({

@@ -1,11 +1,5 @@
 import { Button, Heading, Paragraph } from "@kv-designsystem/react";
-import {
-  Link as RouterLink,
-  useLoaderData,
-  useNavigate,
-  useParams,
-  useSearch,
-} from "@tanstack/react-router";
+import { Link as RouterLink, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { updateRegulering } from "@/api/reguleringer";
 import { BackButton } from "@/components/BackButton/BackButton";
 import { lagRedigering, medGrensejustering, type ReguleringDetail } from "@/domain/regulering";
@@ -16,7 +10,6 @@ const ROUTE = "/layout/reguleringer/$reguleringId/rediger";
 
 function EditSkjema({ regulering }: { regulering: ReguleringDetail }) {
   const navigate = useNavigate();
-  const reguleringer = useLoaderData({ from: ROUTE });
   const indeks = useSearch({ from: ROUTE }).grensejustering ?? 0;
   const reguleringId = String(regulering.id);
   const redigering = lagRedigering(regulering, indeks);
@@ -34,7 +27,6 @@ function EditSkjema({ regulering }: { regulering: ReguleringDetail }) {
       modus="rediger"
       grunnlag={redigering.grunnlag}
       startverdier={redigering.startverdier}
-      reguleringer={reguleringer}
       onLagre={async ({ grensejustering }) => {
         await updateRegulering(
           regulering.id,
