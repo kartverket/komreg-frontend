@@ -200,6 +200,9 @@ export function ReguleringDetail() {
           <Heading level={1} data-size="lg">
             {regulering.navn}
           </Heading>
+          <Button asChild>
+            <a href={`/api/regulering/api/reguleringer/${id}`}>Last ned</a>
+          </Button>
           <Paragraph>Ikrafttredelse: {regulering.dato}</Paragraph>
           <ReguleringInfoSkjema regulering={regulering} onLagret={setRegulering} />
           {regulering.grensejusteringer.map((grensejustering, indeks) => (

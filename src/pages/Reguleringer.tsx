@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Heading, Link, Paragraph, Table } from "@kv-designsystem/react";
-import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { listReguleringer } from "@/api/reguleringer";
+import { Heading, Link, Paragraph, Table, Button } from "@kv-designsystem/react";
+import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import type { ReguleringSummary } from "@/domain/regulering";
 
 export function Reguleringer() {
@@ -46,6 +46,7 @@ export function Reguleringer() {
               <Table.Row>
                 <Table.HeaderCell>Navn</Table.HeaderCell>
                 <Table.HeaderCell>Ikrafttredelse</Table.HeaderCell>
+                <Table.HeaderCell aria-label="Last ned"></Table.HeaderCell>
               </Table.Row>
             </Table.Head>
             <Table.Body>
@@ -73,6 +74,11 @@ export function Reguleringer() {
                     </Link>
                   </Table.Cell>
                   <Table.Cell>{item.dato}</Table.Cell>
+                  <Table.Cell>
+                    <Button asChild variant="secondary">
+                      <a href={`/api/regulering/api/reguleringer/${item.id}`}>Last ned</a>
+                    </Button>
+                  </Table.Cell>
                 </Table.Row>
               ))}
             </Table.Body>
