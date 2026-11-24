@@ -72,7 +72,7 @@ export function Reguleringer() {
                       </RouterLink>
                     </Link>
                   </Table.Cell>
-                  <Table.Cell>{item.dato}</Table.Cell>
+                  <Table.Cell>{item.ikrafttredelse}</Table.Cell>
                 </Table.Row>
               ))}
             </Table.Body>
