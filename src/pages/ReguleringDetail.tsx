@@ -54,7 +54,9 @@ export function ReguleringDetail() {
                   <Table.Row key={formatMatrikkelnummer(item)}>
                     <Table.Cell>{item.gardsnummer}</Table.Cell>
                     <Table.Cell>{item.bruksnummer ?? "Hele gårdsnummeret"}</Table.Cell>
-                    <Table.Cell>{item.teigIder.length}</Table.Cell>
+                    {/* TODO: regulering-api lagrer ikke teigene til en matrikkelenhet, så antallet
+                        er ukjent for lagrede reguleringer. */}
+                    <Table.Cell>{item.teigIder.length || "–"}</Table.Cell>
                     <Table.Cell>{formatNyttMatrikkelnummer(item)}</Table.Cell>
                   </Table.Row>
                 ))}

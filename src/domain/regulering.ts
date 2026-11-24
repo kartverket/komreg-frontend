@@ -1,3 +1,4 @@
+import type { components } from "@/api/regulering-api";
 import type { Matrikkelenhet } from "@/types/Matrikkelenhet";
 import {
   lagVegadressevalg,
@@ -45,13 +46,7 @@ export type OpprettReguleringRequest = {
   grensejustering: GrensejusteringDraft;
 };
 
-export type ReguleringSummary = {
-  id: number;
-  navn: string;
-  dato: string;
-  fraKommunenummer: string;
-  tilKommunenummer: string;
-};
+export type ReguleringSummary = components["schemas"]["ReformSammendrag"];
 
 export type ReguleringDetail = {
   id: number;

@@ -31,13 +31,7 @@ vi.mock("./api/reguleringer", () => ({
   },
   listReguleringer: () =>
     Promise.resolve(
-      lagrede.liste.map((r, i) => ({
-        id: i + 1,
-        navn: r.navn,
-        dato: r.dato,
-        fraKommunenummer: r.grensejustering.fraKommunenummer,
-        tilKommunenummer: r.grensejustering.tilKommunenummer,
-      })),
+      lagrede.liste.map((r, i) => ({ id: i + 1, navn: r.navn, ikrafttredelse: r.dato })),
     ),
 }));
 
@@ -392,10 +386,10 @@ describe("App", () => {
     renderAt("/reguleringer");
 
     expect(await screen.findByRole("table")).toBeVisible();
-    expect(screen.getByRole("columnheader", { name: "Fra kommune" })).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "Ikrafttredelse" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Lagret regulering" })).toBeVisible();
 
-    await userEvent.click(screen.getByRole("cell", { name: "0301" }));
+    await userEvent.click(screen.getByRole("cell", { name: "2026-10-21" }));
     expect(
       await screen.findByRole("heading", { level: 1, name: "Lagret regulering" }),
     ).toBeVisible();
