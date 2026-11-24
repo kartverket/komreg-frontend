@@ -104,13 +104,13 @@ async function medVegnavn(
 
 export async function getRegulering(id: number): Promise<ReguleringDetail> {
   const res = await kall(reguleringerUrl(`/${id}`), KAN_IKKE_HENTES);
-  const regulering = fraReformSpec(id, (await res.json()) as ReformSpec);
-  const { fraKommunenummer, tilKommunenummer, vegadresser } = regulering.grensejustering;
-  return {
-    ...regulering,
-    grensejustering: {
-      ...regulering.grensejustering,
-      vegadresser: await medVegnavn(vegadresser, fraKommunenummer, tilKommunenummer),
-    },
-  };
+  const data = (await res.json()) as ReformSpec;
+  const regulering = fraReformSpec(id, data);
+  const grensejusteringer = await Promise.all(
+    regulering.grensejusteringer.map(async (gj) => ({
+      ...gj,
+      vegadresser: await medVegnavn(gj.vegadresser, gj.fraKommunenummer, gj.tilKommunenummer),
+    })),
+  );
+  return { ...regulering, grensejusteringer };
 }

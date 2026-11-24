@@ -1,44 +1,60 @@
 import { useState, type ReactNode } from "react";
 import {
   Button,
-  Checkbox,
-  Heading,
-  Input,
+  Fieldset,
   Paragraph,
-  Table,
+  Radio,
   Textfield,
+  useRadioGroup,
 } from "@kv-designsystem/react";
 import {
   finnOpptattMatrikkelnummer,
-  formatMatrikkelnummer,
   gardsnummerNokkel,
   matrikkelnumreITilKommune,
   medHeleGardsnummer,
   medNyeMatrikkelnumre,
   validerGrensejustering,
   type GrensejusteringDraft,
+  type GrensejusteringLagring,
   type Grunnlag,
   type NyttMatrikkelnummerInput,
-  type OpprettReguleringRequest,
+  type ReguleringSummary,
   type Startverdier,
 } from "@/domain/regulering";
 import { finnOpptattVegadresse, nyeAdressekoder } from "@/domain/vegadresse";
 import { useVegvalg } from "@/hooks/useVegvalg";
 import { finnEksisterendeVegadresser } from "@/utils/AdresseUtils";
 import { finnEksisterendeMatrikkelnumre } from "@/utils/TeigUtils";
-import { FlyttVegadresser } from "./FlyttVegadresser";
+import { GrensejusteringSkjema } from "./GrensejusteringSkjema";
 
-type Props = {
-  modus: "opprett" | "rediger";
+type FellesProps = {
   grunnlag: Grunnlag;
-  // Det som er fylt inn fra før, når en eksisterende regulering redigeres.
-  startverdier?: Startverdier;
-  // Kalles med en gyldig regulering. Feil den kaster vises i skjemaet.
-  onLagre: (request: OpprettReguleringRequest) => Promise<void>;
+  onLagre: (lagring: GrensejusteringLagring) => Promise<void>;
   avbryt: ReactNode;
 };
 
-export function ReguleringSkjema({ modus, grunnlag, startverdier, onLagre, avbryt }: Props) {
+type ModusProps =
+  | {
+      modus: "rediger";
+      // Det som er fylt inn fra før, når en eksisterende grensejustering redigeres.
+      startverdier?: Startverdier;
+      reguleringer?: undefined;
+    }
+  | {
+      modus: "opprett";
+      startverdier?: undefined;
+      reguleringer: ReguleringSummary[];
+    };
+type Props = FellesProps & ModusProps;
+
+export function ReguleringSkjema({
+  modus,
+  grunnlag,
+  startverdier,
+  reguleringer,
+  onLagre,
+  avbryt,
+}: Props) {
   const redigerer = modus === "rediger";
   const { matrikkelenheter: valgteEnheter, teiger } = grunnlag;
   const vegvalg = useVegvalg(
@@ -94,6 +110,12 @@ export function ReguleringSkjema({ modus, grunnlag, startverdier, onLagre, avbry
     setTilKommune(kommunenummer);
     vegvalg.byttTilKommune(kommunenummer.trim());
   }
+
+  // "new", eller ID-en til en eksisterende regulering som grensejusteringen legges til i.
+  const { getRadioProps, value: valgtRegulering } = useRadioGroup({
+    name: "regulering",
+    value: "new",
+  });
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -153,7 +175,9 @@ export function ReguleringSkjema({ modus, grunnlag, startverdier, onLagre, avbry
     }
 
     try {
-      await onLagre({ navn, dato, grensejustering });
+      const eksisterendeReguleringId =
+        modus === "opprett" && valgtRegulering !== "new" ? Number(valgtRegulering) : undefined;
+      await onLagre({ navn, dato, grensejustering, eksisterendeReguleringId });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Kunne ikke lagre reguleringen");
       setSaving(false);
@@ -162,134 +186,56 @@ export function ReguleringSkjema({ modus, grunnlag, startverdier, onLagre, avbry
 
   return (
     <form className="regulering-form" onSubmit={(event) => void submit(event)}>
-      <Textfield
-        className="regulering-felt"
-        label="Navn"
-        value={navn}
-        onChange={(event) => setNavn(event.target.value)}
-        required
-      />
-      <Textfield
-        className="regulering-felt"
-        label="Ikrafttredelsesdato"
-        type="date"
-        value={dato}
-        onChange={(event) => setDato(event.target.value)}
-        required
-      />
-      <Textfield
-        className="regulering-felt"
-        label="Fra kommune"
-        value={fraKommune}
-        onChange={(event) => setFraKommune(event.target.value)}
-        inputMode="numeric"
-        // Matrikkelenhetene, teigene og adressene ligger i fra kommune, og kan ikke byttes her.
-        readOnly={redigerer}
-        required
-      />
-      <Textfield
-        className="regulering-felt"
-        label="Til kommune"
-        value={tilKommune}
-        onChange={(event) => endreTilKommune(event.target.value)}
-        inputMode="numeric"
-        required
-      />
-      <section>
-        <Heading level={2} data-size="xs">
-          Matrikkelenheter ({matrikkelenheter.length})
-        </Heading>
-        {!redigerer &&
-          gardsnumre.map((nokkel) => (
-            <Checkbox
-              key={nokkel}
-              label={`Flytt hele gårdsnummer ${nokkel}`}
-              checked={heleGardsnummer.has(nokkel)}
-              onChange={(event) => toggleHeleGardsnummer(nokkel, event.target.checked)}
+      {modus === "opprett" && (
+        <Fieldset>
+          <Fieldset.Legend>Velg en regulering</Fieldset.Legend>
+          <Radio label="Opprett ny regulering" {...getRadioProps("new")} />
+          {reguleringer.map((regulering) => (
+            <Radio
+              key={regulering.id}
+              label={regulering.navn}
+              {...getRadioProps(String(regulering.id))}
             />
           ))}
-        <Paragraph data-size="sm">
-          Fyll inn nytt gårds- og bruksnummer der matrikkelenheten skal få nytt nummer i til
-          kommune. Tomme felt beholder dagens nummer.
-        </Paragraph>
-        <div className="regulering-table-wrapper">
-          <Table data-size="sm" zebra>
-            <Table.Head>
-              <Table.Row>
-                <Table.HeaderCell>Matrikkelenhet</Table.HeaderCell>
-                <Table.HeaderCell>Nytt gårdsnummer</Table.HeaderCell>
-                <Table.HeaderCell>Nytt bruksnummer</Table.HeaderCell>
-              </Table.Row>
-            </Table.Head>
-            <Table.Body>
-              {matrikkelenheter.map((item) => {
-                const nokkel = formatMatrikkelnummer(item);
-                const input = nyeNumre.get(nokkel);
-                return (
-                  <Table.Row key={nokkel}>
-                    <Table.Cell>{nokkel}</Table.Cell>
-                    <Table.Cell>
-                      <Input
-                        className="matrikkelnummer-input"
-                        aria-label={`Nytt gårdsnummer for ${nokkel}`}
-                        inputMode="numeric"
-                        placeholder={String(item.gardsnummer)}
-                        value={input?.gardsnummer ?? ""}
-                        onChange={(event) =>
-                          endreNyttNummer(nokkel, "gardsnummer", event.target.value)
-                        }
-                      />
-                    </Table.Cell>
-                    <Table.Cell>
-                      {item.bruksnummer === null ? (
-                        "Beholdes"
-                      ) : (
-                        <Input
-                          className="matrikkelnummer-input"
-                          aria-label={`Nytt bruksnummer for ${nokkel}`}
-                          inputMode="numeric"
-                          placeholder={String(item.bruksnummer)}
-                          value={input?.bruksnummer ?? ""}
-                          onChange={(event) =>
-                            endreNyttNummer(nokkel, "bruksnummer", event.target.value)
-                          }
-                        />
-                      )}
-                    </Table.Cell>
-                  </Table.Row>
-                );
-              })}
-            </Table.Body>
-          </Table>
-        </div>
-      </section>
-      {teiger.length > 0 && (
-        <section>
-          <Heading level={2} data-size="xs">
-            Teiger uten matrikkelnummer ({teiger.length})
-          </Heading>
-          <Paragraph data-size="sm">
-            Teigene beholder teig-ID-en og er fortsatt uten matrikkelnummer i til kommune.
-          </Paragraph>
-          <div className="regulering-table-wrapper">
-            <Table data-size="sm" zebra>
-              <Table.Head>
-                <Table.Row>
-                  <Table.HeaderCell>Teig-ID</Table.HeaderCell>
-                </Table.Row>
-              </Table.Head>
-              <Table.Body>
-                {teiger.map((teig) => (
-                  <Table.Row key={teig.teigId}>
-                    <Table.Cell>{teig.teigId}</Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table>
-          </div>
-        </section>
+        </Fieldset>
       )}
-      {vegadresser.length > 0 && <FlyttVegadresser vegvalg={vegvalg} />}
+      {modus === "opprett" && valgtRegulering === "new" && (
+        <>
+          <Paragraph data-size="sm">
+            Du oppretter en ny regulering med matrikkelenheter, teiger og vegadresser.
+          </Paragraph>
+          <Textfield
+            className="regulering-felt"
+            label="Navn"
+            value={navn}
+            onChange={(event) => setNavn(event.target.value)}
+            required
+          />
+          <Textfield
+            className="regulering-felt"
+            label="Ikrafttredelsesdato"
+            type="date"
+            value={dato}
+            onChange={(event) => setDato(event.target.value)}
+            required
+          />
+        </>
+      )}
+      <GrensejusteringSkjema
+        redigerer={redigerer}
+        fraKommune={fraKommune}
+        onFraKommuneChange={setFraKommune}
+        tilKommune={tilKommune}
+        onTilKommuneChange={endreTilKommune}
+        gardsnumre={gardsnumre}
+        heleGardsnummer={heleGardsnummer}
+        onToggleHeleGardsnummer={toggleHeleGardsnummer}
+        matrikkelenheter={matrikkelenheter}
+        nyeNumre={nyeNumre}
+        onEndreNyttNummer={endreNyttNummer}
+        teiger={teiger}
+        vegvalg={vegvalg}
+      />
       {error && (
         <Paragraph className="form-error" role="alert">
           {error}
