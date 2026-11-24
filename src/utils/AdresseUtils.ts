@@ -50,3 +50,19 @@ export async function finnEksisterendeVegadresser(
   );
   return perVeg.flat();
 }
+
+// Regulering-api lagrer bare adressekoden, så navnet på vegen hentes fra adresse-API-et.
+// Adressekoder uten adresser i kommunen er ikke med i svaret.
+export async function finnVegnavn(
+  kommunenummer: string,
+  adressekoder: number[],
+): Promise<Map<number, string>> {
+  const navn = await Promise.all(
+    adressekoder.map(async (adressekode) => {
+      const adresser = await sokVegadresser({ kommunenummer, adressekode: String(adressekode) });
+      const treff = adresser.find((adresse) => adresse.adressekode === adressekode);
+      return treff ? ([[adressekode, treff.adressenavn]] as const) : [];
+    }),
+  );
+  return new Map(navn.flat());
+}

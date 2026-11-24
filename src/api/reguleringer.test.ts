@@ -63,12 +63,24 @@ describe("reguleringer-API", () => {
     await expect(createRegulering(request)).rejects.toThrow("kunne ikke lagres");
   });
 
-  it("lager sammendrag for reguleringslisten", async () => {
-    mockFetch([{ id: 1, navn: "Test", ikrafttredelse: "2026-10-21" }]);
+  it("lister sammendragene fra serveren", async () => {
+    const sammendrag = [{ id: 1, navn: "Test", ikrafttredelse: "2026-10-21" }];
+    mockFetch(sammendrag);
 
-    await expect(listReguleringer()).resolves.toEqual([
-      { id: 1, navn: "Test", dato: "2026-10-21", fraKommunenummer: "", tilKommunenummer: "" },
-    ]);
+    await expect(listReguleringer()).resolves.toEqual(sammendrag);
+  });
+
+  it("gir meldingene fra serveren når reguleringen avvises", async () => {
+    mockFetch(
+      {
+        gyldig: false,
+        feil: [{ melding: "Første feil." }, { melding: "Andre feil." }],
+      },
+      false,
+      422,
+    );
+
+    await expect(createRegulering(request)).rejects.toThrow("Første feil. Andre feil.");
   });
 
   it("sender den endrede reformSpec med PUT", async () => {
@@ -121,5 +133,43 @@ describe("reguleringer-API", () => {
       navn: request.navn,
       dato: request.dato,
     });
+  });
+
+  it("henter vegnavnene fra adresse-API-et", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: URL | string) => {
+        const sok = new URL(url).searchParams;
+        if (!sok.has("adressekode")) return Promise.resolve(Response.json(tilReformSpec(request)));
+        const vegnavn = new Map([
+          ["1525-1234", "Storgata"],
+          ["1508-5678", "Kirkevegen"],
+        ]);
+        const adressenavn = vegnavn.get(`${sok.get("kommunenummer")}-${sok.get("adressekode")}`);
+        const adressekode = Number(sok.get("adressekode"));
+        return Promise.resolve(
+          Response.json({ adresser: [{ adressekode, adressenavn, nummer: 1, bokstav: "" }] }),
+        );
+      }),
+    );
+
+    const { grensejusteringer } = await getRegulering(3);
+    expect(grensejusteringer).toHaveLength(1);
+    expect(grensejusteringer[0]?.vegadresser[0]?.veg.adressenavn).toBe("Storgata");
+    expect(grensejusteringer[0]?.vegadresser[0]?.nyVeg?.adressenavn).toBe("Kirkevegen");
+  });
+
+  it("viser adressekoden når vegnavnet ikke kan hentes", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: URL | string) =>
+        new URL(url).searchParams.has("adressekode")
+          ? Promise.reject(new TypeError("Failed to fetch"))
+          : Promise.resolve(Response.json(tilReformSpec(request))),
+      ),
+    );
+
+    const { grensejusteringer } = await getRegulering(3);
+    expect(grensejusteringer?.[0]?.vegadresser[0]?.veg.adressenavn).toBe("Adressekode 1234");
   });
 });

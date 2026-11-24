@@ -20,10 +20,13 @@ For å teste frontend med Caddy lokalt, kjør fra repoet:
 ./dev.sh    # http://localhost:8080
 ```
 
-## Midlertidig lagring av reguleringer
+## Typer fra backend
 
-Reguleringsutkast lagres foreløpig i nettleserens `localStorage`. De synkroniseres ikke mellom
-nettlesere eller brukere, og må ikke regnes som varig lagret i backend.
+`src/api/regulering-api.d.ts` er generert fra OpenAPI-dokumentet til `regulering-api`, og skal ikke
+endres for hånd. Når API-et endres, start backend og generer filen på nytt:
 
-All lagring går gjennom `src/api/reguleringer.ts`. Når backend kan lagre reguleringer, er det bare
-den filen som skal byttes ut.
+```sh
+curl -o openapi.json http://localhost:8082/openapi/openapi.json
+vp dlx openapi-typescript@7 openapi.json -o src/api/regulering-api.d.ts
+rm openapi.json
+```

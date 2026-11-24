@@ -73,7 +73,7 @@ export function Reguleringer() {
                       </RouterLink>
                     </Link>
                   </Table.Cell>
-                  <Table.Cell>{item.dato}</Table.Cell>
+                  <Table.Cell>{item.ikrafttredelse}</Table.Cell>
                   <Table.Cell>
                     <Button asChild variant="secondary">
                       <a href={`/api/regulering/api/reguleringer/${item.id}`}>Last ned</a>

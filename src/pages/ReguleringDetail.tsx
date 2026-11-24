@@ -121,7 +121,9 @@ function Grensejustering({
               <Table.Row key={formatMatrikkelnummer(item)}>
                 <Table.Cell>{item.gardsnummer}</Table.Cell>
                 <Table.Cell>{item.bruksnummer ?? "Hele gårdsnummeret"}</Table.Cell>
-                <Table.Cell>{item.teigIder.length}</Table.Cell>
+                {/* TODO: regulering-api lagrer ikke teigene til en matrikkelenhet, så antallet
+                        er ukjent for lagrede reguleringer. */}
+                <Table.Cell>{item.teigIder.length || "–"}</Table.Cell>
                 <Table.Cell>{formatNyttMatrikkelnummer(item)}</Table.Cell>
               </Table.Row>
             ))}
@@ -200,9 +202,6 @@ export function ReguleringDetail() {
           <Heading level={1} data-size="lg">
             {regulering.navn}
           </Heading>
-          <Button asChild>
-            <a href={`/api/regulering/api/reguleringer/${id}`}>Last ned</a>
-          </Button>
           <Paragraph>Ikrafttredelse: {regulering.dato}</Paragraph>
           <ReguleringInfoSkjema regulering={regulering} onLagret={setRegulering} />
           {regulering.grensejusteringer.map((grensejustering, indeks) => (

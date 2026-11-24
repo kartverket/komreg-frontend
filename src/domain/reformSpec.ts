@@ -1,13 +1,4 @@
-import type {
-  AdjustOp,
-  Kind,
-  KeySpec,
-  MoveOp,
-  OpSpec,
-  PathSpec,
-  ReformSpec,
-  Segment,
-} from "@/types/ReformSpec";
+import type { components } from "@/api/regulering-api";
 import {
   nyttMatrikkelnummer,
   type GrensejusteringDraft,
@@ -15,6 +6,18 @@ import {
   type ReguleringDetail,
 } from "./regulering";
 import type { Veg } from "./vegadresse";
+
+// Typene er generert fra OpenAPI-dokumentet til regulering-api. Formatet er beskrevet i
+// komreg-backend/docs/reform-format.md.
+type Schemas = components["schemas"];
+export type ReformSpec = Schemas["ReformSpec"];
+type Kind = Schemas["Kind"];
+type KeySpec = Schemas["KeySpec"];
+type MoveOp = Schemas["MoveOp"];
+type OpSpec = Schemas["OpSpec"];
+type PathSpec = Schemas["PathSpec"];
+type AdjustOp = Schemas["AdjustOp"];
+type Segment = Schemas["Segment"];
 
 // Kommunenummeret er fylke (2 siffer) og løpenummer (2 siffer) sammen.
 function kommuneNokkel(kommunenummer: string): [string, string] {
@@ -97,7 +100,7 @@ export function tilReformSpec({
   dato,
   grensejusteringer,
 }: OpprettReguleringRequest): ReformSpec {
-  return { navn, ikrafttredelse: dato, operasjoner: grensejusteringer.map(tilAdjust) };
+  return { format: 1, navn, ikrafttredelse: dato, operasjoner: grensejusteringer.map(tilAdjust) };
 }
 
 const STOTTEDE_KINDS: Kind[] = [

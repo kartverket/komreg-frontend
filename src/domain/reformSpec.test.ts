@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { AdjustOp, ReformSpec } from "@/types/ReformSpec";
 import { fraReformSpec, tilReformSpec } from "./reformSpec";
 import type { GrensejusteringDraft } from "./regulering";
 import type { VegadresseDraft } from "./vegadresse";
+import type { components } from "@/api/regulering-api";
+type ReformSpec = components["schemas"]["ReformSpec"];
+type AdjustOp = components["schemas"]["AdjustOp"];
 
 const veg = { adressekode: 1234, adressenavn: "Langemyrvegen" };
 const nyVeg = { adressekode: 5678, adressenavn: "Langemyrvegen" };
@@ -111,6 +113,7 @@ describe("fraReformSpec", () => {
 
   it("kaster på flyttinger som ikke ligger under en adjust av en kommune", () => {
     const reformSpec: ReformSpec = {
+      format: 1,
       navn: "Test",
       ikrafttredelse: "2027-01-01",
       operasjoner: [{ op: "move", kind: "parcel", key: ["03", "01", 99], to: ["03", "02", 99] }],
@@ -121,6 +124,7 @@ describe("fraReformSpec", () => {
 
   it("kaster når en adjust flytter til flere kommuner", () => {
     const reformSpec: ReformSpec = {
+      format: 1,
       navn: "Test",
       ikrafttredelse: "2027-01-01",
       operasjoner: [
