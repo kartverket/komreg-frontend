@@ -26,7 +26,6 @@
     "babel-plugin-react-compiler": "1.0.0",
     "jsdom": "31.0.1",
     "typescript": "7.0.2",
-    "vite": "catalog:",
     "vite-plus": "catalog:"
   },
   "devEngines": {
