@@ -6,7 +6,7 @@
     "module": "esnext",
     // The two @kv-designsystem entries type the data-color / data-size / data-color-scheme
     // attributes the designsystem reads.
-    "types": ["vite/client", "@kv-designsystem/theme/types", "@kv-designsystem/react/html"],
+    "types": ["vite-plus/client", "@kv-designsystem/theme/types", "@kv-designsystem/react/html"],
     "allowArbitraryExtensions": true,
     // Required, not a shortcut: Digdir's bundled types reference preact/svelte/solid and
     // fail to check without it.
